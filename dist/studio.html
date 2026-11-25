@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#211d38">
+<meta name="description" content="Generate visual challenges, cross-check the rendered answers and benchmark image understanding.">
+<title>Visual Task Factory · Evaluation studio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23705ad6'/%3E%3Cpath fill='white' d='M5 9h5l6 13-3 5zm8-4h5l6 13-3 5zm9 0h5l2 4-3 6z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script defer src="activity.js"></script><script defer src="engine.js"></script><script defer src="skills.js"></script><script defer src="lab-visual.js"></script><script defer src="lab-geometry.js"></script><script defer src="lab-counts.js"></script><script defer src="lab-patterns.js"></script><script defer src="lab-transforms.js"></script><script defer src="lab-skills.js"></script><script defer src="app.js"></script>
+</head><body>
+<header class="top"><div class="topinner"><a class="brand" href="index.html" aria-label="Visual Task Factory home"><span class="brandmark" aria-hidden="true"><i></i><i></i><i></i></span>Visual Task Factory</a>
+<nav aria-label="Main navigation"><button id="navStudio" class="nav active"><span data-icon="layout"></span>Studio</button><a data-online-only class="nav" style="text-decoration:none" href="live.html">Live Demo</a><button id="navHistory" class="nav"><span data-icon="history"></span>Run history</button><a data-online-only class="nav" style="text-decoration:none" href="framework.html">Framework</a></nav>
+<button class="methodbtn" id="method"><span data-icon="book"></span><span>How it works</span></button></div></header>
+<main>
+<section id="studio">
+<div class="titlebar"><div><h1>Evaluation studio<span class="period">.</span></h1><p>Generate an image and a visual question from a seed. Test the exact PNG and inspect the evidence behind its answer.</p></div><div class="heroactions"><button class="btn white" id="generate"><span data-icon="shuffle"></span>Generate sample</button><button class="btn primary tour" id="freshRun"><span data-icon="play"></span>Generate &amp; test live</button><button class="btn white tour" id="tour"><span data-icon="play"></span><span id="tourLabel">Run all skills</span></button></div></div>
+<div class="skillpicker" aria-label="Choose a visual skill" role="group">
+<button class="skillcard is-active" data-family="charts" aria-pressed="true"><canvas class="skillart" width="124" height="80" aria-hidden="true"></canvas><span><strong>Chart reading</strong><small>Compare bar heights</small></span></button>
+<button class="skillcard" data-family="counting" aria-pressed="false"><canvas class="skillart" width="124" height="80" aria-hidden="true"></canvas><span><strong>Numeric answering</strong><small>Filter by shape and color</small></span></button>
+<button class="skillcard" data-family="spatial" aria-pressed="false"><canvas class="skillart" width="124" height="80" aria-hidden="true"></canvas><span><strong>Spatial reasoning</strong><small>Identify a star’s neighbors</small></span></button>
+<button class="skillcard" data-family="geometry" aria-pressed="false"><canvas class="skillart" width="124" height="80" aria-hidden="true"></canvas><span><strong>Geometric reasoning</strong><small>Measurements and proportions</small></span></button>
+<button class="skillcard" data-family="quantities" aria-pressed="false"><canvas class="skillart" width="124" height="80" aria-hidden="true"></canvas><span><strong>Counting & measurement</strong><small>Grid paths and inventory changes</small></span></button>
+<button class="skillcard" data-family="patterns" aria-pressed="false"><canvas class="skillart" width="124" height="80" aria-hidden="true"></canvas><span><strong>Symmetry & patterns</strong><small>Reflections and periodicity</small></span></button>
+<button class="skillcard" data-family="sequences" aria-pressed="false"><canvas class="skillart" width="124" height="80" aria-hidden="true"></canvas><span><strong>Sequences & transforms</strong><small>Infer the next panel</small></span></button>
+</div>
+<div class="workspace">
+<section class="panel preview">
+<div class="panelhead"><div class="headgroup"><span class="iconbox"><span data-icon="scan"></span></span><h2>Challenge preview</h2></div><button id="seedEdit" class="seed" title="Replay a seed"><span data-icon="hash"></span><span id="seedText">082041</span><span data-icon="edit"></span></button></div>
+<div class="varianttabs" role="group" aria-label="Image variant"><button class="variant selected" data-v="0" aria-pressed="true"><span class="vnum">A</span>Original</button><button class="variant" data-v="1" aria-pressed="false"><span class="vnum">B</span>Restyled</button><button class="variant" data-v="2" aria-pressed="false"><span class="vnum">C</span>Value swap</button><a data-online-only id="liveSwap" class="liveswap" href="live.html?probe=swap" title="Generate a fresh case for this task in Live Demo">Try question swap ↗</a></div>
+<div class="stage"><div class="stagebar"><span><i class="livedot"></i>STIMULUS VIEWER</span><span>820 × 356 PX</span></div><div class="paper"><canvas id="chart" width="820" height="356" role="img" aria-label="Regional sales bar chart"></canvas></div><div id="comparison" class="comparison" hidden><div><span>Original</span><canvas width="820" height="356" role="img" aria-label="Original image for comparison"></canvas><small id="compareOriginalScore" hidden></small></div><div><span id="compareTitle">Changed</span><canvas width="820" height="356" role="img" aria-label="Variant image for comparison"></canvas><small id="compareEditScore" hidden></small></div></div><div class="stagefoot"><span id="variantNote">Original chart</span><button class="comparebtn" id="compare" aria-pressed="false">Compare images</button><button class="tinybtn" id="downloadImg" title="Download image PNG" aria-label="Download image PNG"><span data-icon="download"></span></button></div></div>
+<div class="tourreview" id="tourReview" hidden><span id="tourPosition"></span><button class="linkbtn" id="nextSkill">Next skill</button></div><div class="prompt"><span class="prompticon" data-icon="message"></span><div><div class="overline">Generated question</div><p id="questionText"></p></div></div>
+</section>
+<aside class="panel setup"><div class="panelhead"><div class="headgroup"><span class="iconbox"><span data-icon="sliders"></span></span><h2>Run setup</h2></div></div>
+<div class="fields"><label for="model">Evaluator</label><div class="field"><span data-icon="chip"></span><select id="model"><option value="local">Local image baseline</option><option value="openai">Live vision model (API)</option></select></div>
+<div id="remoteControls" hidden><label for="apiBase">API base URL</label><input id="apiBase" type="url" value="https://api.openai.com/v1" autocomplete="off"><label for="modelName">Model ID</label><input id="modelName" type="text" value="gpt-4.1-mini" maxlength="100" autocomplete="off"><label for="apiKey">API key</label><input id="apiKey" type="password" autocomplete="off" placeholder="Enter a session key"><p class="fieldnote">Sends the PNG and question to the selected endpoint. A local inference server can run without a key. Keys stay in this tab.</p></div>
+<div class="taskrow"><label for="question">Task type</label><button class="linkbtn" id="library">Browse all tasks</button></div><div class="field"><span data-icon="chart"></span><select id="question"><option value="highest">Highest value</option><option value="lowest">Lowest value</option></select></div>
+<div class="twocol"><div><label for="difficulty">Difficulty</label><div class="field compact"><select id="difficulty"><option value="standard">Standard</option><option value="close">Close call</option></select></div></div><div><label for="size">Run size</label><div class="field compact"><select id="size"><option value="1">1 challenge</option><option value="5">5 challenges</option><option value="20">20 challenges</option></select></div></div></div>
+<div class="runsummary"><span data-icon="layers"></span><span id="runSummary">3 images per run</span></div>
+<button id="run" class="btn primary"><span data-icon="play"></span><span id="runLabel">Run evaluation</span></button>
+<button id="cancel" hidden class="linkbtn">Cancel run</button>
+</div></aside>
+</div>
+<button id="verify" class="verification"><span class="verifiedicon" data-icon="shield"></span><span class="verifytext"><strong>Answer key verified</strong><span>Source data and pixel measurements agree on all three images.</span></span><span class="inspect">Inspect checks <span data-icon="chevron"></span></span></button>
+<section class="panel results" id="results"><div class="panelhead"><div class="headgroup"><span class="iconbox neutral"><span data-icon="gauge"></span></span><h2>Evaluation results</h2></div><span class="state" id="resultState">Awaiting run</span></div><div id="resultBody"></div></section>
+</section>
+<section id="history" hidden><div class="titlebar"><div><h1>Run history<span class="period">.</span></h1><p>Inspect and replay the last 25 completed runs saved in this browser.</p></div><button class="btn white" id="back"><span data-icon="layout"></span>Open studio</button></div><div id="historyBody"></div></section>
+<footer><span><span class="footerbrand"></span>Visual Task Factory</span><a class="offlinedl" download="Visual Task Factory.html" href="visual-task-factory.html">Download offline demo</a></footer>
+</main>
+<dialog id="dialog"><div class="dialoghead"><h2 id="dialogTitle"></h2><button id="closeDialog" class="iconbtn" aria-label="Close dialog"><span data-icon="x"></span></button></div><div id="dialogBody"></div></dialog>
+<div id="notice" class="toast" role="status" aria-live="polite" hidden></div><div class="sr" id="live" role="status" aria-live="polite"></div>
+</body></html>

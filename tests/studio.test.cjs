@@ -1,0 +1,92 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const os=require('node:os');
+const {fs,path}=require('../framework/core.cjs');
+const {generate,verify,validateSuite}=require('../framework/dataset.cjs');
+const {skills,decode}=require('../framework/runtime.cjs');
+const {normalize}=require('../framework/scoring.cjs');
+const full=require('../suites/studio.json'),demo=require('../suites/studio-demo.json');
+
+test('all twenty live task types survive PNG encoding with both difficulties and all three variants',async t=>{
+  const root=await fs.mkdtemp(path.join(os.tmpdir(),'vtf-reasoning-'));t.after(()=>fs.rm(root,{recursive:true,force:true}));
+  const location=path.join(root,'frozen'),m=await generate(full,location);
+  const {tasks,labels}=await verify(location);assert.equal(m.count,120);assert.equal(new Set(labels.map(r=>r.question)).size,20);
+  for(const [i,record] of labels.entries()){
+    assert.equal(record.source.query.text,tasks[i].question);
+    assert.equal(normalize(record.answer,record.family,record.question),record.answer);
+  }
+  assert.throws(()=>validateSuite({...demo,tasks:{geometry:['typo']}}),/Invalid task/);
+  const small=await generate(demo,path.join(root,'pilot'));assert.equal(small.count,12);
+});
+
+test('the same warehouse seed reproduces a generated row query and changes exactly one relevant bin',async()=>{
+  const prompts=new Set();
+  for(let seed=0;seed<20;seed++){
+    const c=skills.create('quantities',seed,'recolor','close'),[a,b,d]=c.tasks;
+    assert.equal(c.prompt,skills.promptFor('quantities','recolor',seed,'close'));prompts.add(c.prompt);
+    assert.equal(b.key,a.key);assert.equal(Math.abs(Number(a.key)-Number(d.key)),1);
+    const original=a.rows.scene,edited=d.rows.scene,q=a.rows.query;assert.deepEqual(original.a,edited.a);
+    const changes=[];for(let y=0;y<6;y++)for(let x=0;x<6;x++)if(original.b[y][x]!==edited.b[y][x])changes.push([x,y]);
+    assert.equal(changes.length,1);const [x,y]=changes[0];
+    assert.ok(y+1>=q.first&&y+1<=q.last);assert.ok(!q.ink||q.ink===original.a[y][x]);
+    if(seed===0){
+      const decoded=await decode(a.canvas.toBuffer('image/png')),g=decoded.getContext('2d'),pitch=Math.floor(211/6);
+      g.drawImage(d.canvas,493+x*pitch,107+y*pitch,pitch,pitch,493+x*pitch,107+y*pitch,pitch,pitch);
+      assert.equal(skills.pixelCheck(decoded,'quantities','recolor',c.prompt).answer,d.key);
+      assert.equal(skills.sourceAnswer('quantities','recolor',a.rows),a.key);decoded.width=1;
+    }
+    c.tasks.forEach(t=>t.canvas.width=1);
+  }
+  assert.ok(prompts.size>10);
+});
+test('raster readers distinguish the edited answer across all task types and keep order meaningful',()=>{
+  for(const [family,v] of Object.entries(skills.labFamilies))for(const type of Object.keys(v.types)){
+    const c=skills.create(family,4294967295,type,'standard');
+    const [a,b,d]=c.tasks;
+    assert.equal(skills.pixelCheck(d.canvas,family,type,c.prompt).answer,d.key);
+    assert.equal(a.key,b.key);assert.notEqual(a.key,d.key);
+    c.tasks.forEach(t=>t.canvas.width=1);
+  }
+  assert.equal(normalize(' B, C, A. ','geometry','sorting'),'B C A');
+  assert.equal(normalize('A B C','geometry','sorting'),'A B C');
+  assert.equal(normalize('41','patterns','wallpaper'),null);
+});
+
+test('restyling changes the visible task marks in every reasoning task', () => {
+  for (const [family,definition] of Object.entries(skills.labFamilies)) {
+    for (const task of Object.keys(definition.types)) {
+      const scene=skills.create(family,82041,task,'standard');
+      const [original,restyled]=scene.tasks.map(t=>t.canvas);
+      const data=canvas=>canvas.getContext('2d').getImageData(24,56,772,277).data;
+      const a=data(original),b=data(restyled);
+      let colored=0,changed=0;
+      // Exclude the background, text and frame so a theme change must also affect the puzzle.
+      for(let i=0;i<a.length;i+=4){
+        if(Math.max(a[i],a[i+1],a[i+2])-Math.min(a[i],a[i+1],a[i+2])<=55)continue;
+        colored++;
+        if(Math.max(Math.abs(a[i]-b[i]),Math.abs(a[i+1]-b[i+1]),Math.abs(a[i+2]-b[i+2]))>=48)changed++;
+      }
+      assert.ok(colored>0 && changed/colored>0.7,task+' needs a visible restyle of the colored marks');
+      scene.tasks.forEach(t=>t.canvas.width=1);
+    }
+  }
+});
+
+test('live questions and swaps use the same verified PNG for every Studio task',async()=>{
+  const {live}=require('../framework/runtime.cjs');
+  const io={encode:c=>c.toDataURL('image/png'),decode:url=>decode(Buffer.from(url.split(',')[1],'base64'))};
+  for(const [family,def] of Object.entries(skills.families).filter(([id])=>!id.startsWith('panel_'))){
+    for(const task of Object.keys(def.types)){
+      const c=await live.generate(family,task,'close',io);
+      const {direct,swap}=c.questions;
+      assert.ok(!('seed' in c));assert.notEqual(direct.text,swap.text);
+      for(const [id,q] of Object.entries(c.questions)){
+        const measured=c.pixels[id].answer;
+        const expected=q.kind==='claim check'?(measured===q.claim?'Yes':'No'):measured;
+        assert.equal(q.pixelAnswer,expected);assert.equal(q.reference,expected);
+        assert.ok(q.choices.includes(expected));
+      }
+      if(swap.kind==='new target')assert.notEqual(swap.baseQuestion,direct.baseQuestion);
+    }
+  }
+});

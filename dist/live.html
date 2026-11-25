@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#211e30">
+<title>Live Demo · Visual Task Factory</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="live.css">
+<script defer src="activity.js"></script><script defer src="engine.js"></script><script defer src="skills.js"></script><script defer src="lab-visual.js"></script><script defer src="lab-geometry.js"></script><script defer src="lab-counts.js"></script><script defer src="lab-patterns.js"></script><script defer src="lab-transforms.js"></script><script defer src="lab-skills.js"></script><script defer src="live-engine.js"></script><script defer src="live.js"></script>
+</head><body>
+<header class="top"><div class="topinner"><a class="brand" href="index.html"><span class="brandmark" aria-hidden="true"><i></i><i></i><i></i></span>Visual Task Factory</a><nav aria-label="Main navigation"><a class="nav" href="studio.html">Studio</a><a class="nav active" href="live.html" aria-current="page">Live Demo</a><a class="nav" href="framework.html">Framework</a></nav></div></header>
+<main class="live-demo">
+<div class="titlebar"><div><h1>Live demo<span class="period">.</span></h1><p>Choose a task, then run the pipeline or step through it one stage at a time.</p></div><span class="runtime" id="runtime"></span></div>
+<div class="live-layout">
+<section class="panel live-case" aria-label="Generated case">
+<div class="case-head"><h2 id="case-title">Generated image</h2><a id="save-image" class="linkbtn" hidden download="live-case.png">Download PNG</a></div>
+<div class="image-stage"><img id="picture" width="820" height="356" alt="Generated visual task" hidden><p id="empty-image">Start a run to generate an image.</p></div>
+<div class="case-content"><div class="probe-group" role="group" aria-label="Question for this image"><button disabled data-probe="direct" aria-pressed="true">Task question</button><button disabled data-probe="swap" aria-pressed="false">Question swap</button></div>
+<p id="prompt" aria-live="polite">The question will appear after the image is rendered.</p>
+<div class="prediction-box"><div class="predict-head"><h3>Prediction</h3><span id="verdict"></span></div><p id="prediction">Ready when the PNG is verified.</p><button id="evaluate" disabled class="btn white">Evaluate this question</button></div>
+<details id="evidence" hidden><summary>Inspect pipeline evidence</summary><p id="keys"></p><div class="data-pair"><details><summary>Source scene</summary><pre id="source"></pre></details><details id="pixel-detail" hidden><summary>PNG measurements</summary><pre id="pixels"></pre></details></div></details>
+</div></section>
+<aside class="controls"><section class="panel settings"><h2>Run setup</h2>
+<label for="family">Skill</label><select id="family"></select><label for="task">Task</label><select id="task"></select>
+<label for="difficulty">Difficulty</label><select id="difficulty"><option value="standard">Standard</option><option value="close">Fine detail</option></select>
+<label for="evaluator">Evaluator</label><select id="evaluator"><option value="local">Local image baseline</option><option value="openai">Live vision model</option></select>
+<div id="api-fields" hidden><label for="endpoint">API base URL</label><input id="endpoint" type="url" value="https://api.openai.com/v1"><label for="model">Model ID</label><input id="model" value="gpt-4.1-mini"><label for="token">API key</label><input id="token" type="password" autocomplete="off"></div>
+<p class="fieldnote" id="model-note"></p><div class="run-actions"><button id="run" class="btn primary">Run fresh case</button><button id="step" class="btn white">Step through</button><button id="generate" class="btn white">Generate only</button></div>
+</section></aside>
+<section class="panel trace"><div class="case-head"><h2>Pipeline trace</h2><button id="export" class="linkbtn" disabled>Export case</button></div><ol id="steps" aria-label="Live pipeline stages"></ol></section>
+</div><p id="live-error" role="alert" hidden></p><p id="announce" class="sr" role="status" aria-live="polite"></p></main></body></html>

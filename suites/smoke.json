@@ -1,0 +1,8 @@
+{
+  "name": "visual-skills-smoke",
+  "seed": 82041,
+  "repeats": 1,
+  "families": ["charts", "counting", "spatial"],
+  "difficulties": ["standard", "close"],
+  "gates": {"accuracy": 0.35}
+}

@@ -1,0 +1,16 @@
+{
+  "name": "studio-visual-reasoning",
+  "seed": 967451,
+  "repeats": 1,
+  "families": [
+    "geometry",
+    "quantities",
+    "patterns",
+    "sequences"
+  ],
+  "difficulties": [
+    "standard",
+    "close"
+  ],
+  "gates": {}
+}

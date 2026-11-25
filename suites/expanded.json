@@ -1,0 +1,8 @@
+{
+  "name": "visual-skills-expanded",
+  "seed": 195803,
+  "repeats": 10,
+  "families": ["charts", "counting", "spatial"],
+  "difficulties": ["standard", "close"],
+  "gates": {}
+}

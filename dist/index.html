@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f8f8fb"><meta name="description" content="Generate visual tasks, measure their answers from the pixels, and evaluate multimodal models against verified ground truth.">
+<title>Visual Task Factory · Overview</title>
+<script>
+  const legacyParams=new URLSearchParams(location.search);
+  if(legacyParams.has('station'))location.replace('inspection.html'+location.search+location.hash);
+  else if(['skill','task','difficulty','seed'].some(key=>legacyParams.has(key))||location.hash==='#studio')location.replace('studio.html'+location.search+location.hash);
+  else if(location.hash==='#live')location.replace('live.html'+location.search);
+</script>
+<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="home.css">
+<script defer src="activity.js"></script><script defer src="home-data.js"></script><script defer src="home.js"></script>
+</head>
+<body class="overview">
+<header class="top"><div class="topinner"><a class="brand" href="index.html" aria-label="Visual Task Factory home"><span class="brandmark" aria-hidden="true"><i></i><i></i><i></i></span>Visual Task Factory</a><nav aria-label="Main navigation"><a class="nav active" href="index.html" aria-current="page">Overview</a><a class="nav" href="studio.html">Studio</a><a class="nav" href="live.html">Live Demo</a></nav><a class="framework-link" href="framework.html">Framework</a></div></header>
+<main>
+<section class="home-hero" aria-labelledby="intro">
+ <div class="hero-copy"><h1 id="intro">How well does AI <em>read an image?</em></h1>
+ <p>Generate a visual task, give it to a model, and check the response against an answer measured from the image itself.</p>
+ <div class="actions"><a class="action solid" href="live.html">Run live demo</a><a class="action quiet" href="studio.html">Open Studio</a></div></div>
+ <section class="case-card" aria-labelledby="case-title">
+   <div class="case-top"><h2 id="case-title">Warehouse bin audit</h2><a href="downloads/studio/live-question-swap.json" class="case-link">Recorded case</a></div>
+   <div class="case-visual">
+     <div class="board-set" id="board-set" hidden><div class="board-unit"><span>Before</span><div id="before-board" class="matrix"></div></div><div class="board-unit"><span>After</span><div id="after-board" class="matrix"></div></div></div>
+     <img id="case-fallback" src="examples/warehouse.png" alt="The two warehouse plans from the recorded case" width="820" height="356">
+     <a id="bay-name" class="bay-name" href="examples/warehouse.png" aria-label="Open the original tested warehouse PNG"></a>
+   </div>
+   <div class="case-bottom"><div><p id="case-question" aria-live="polite">How many bins changed?</p><small id="case-proof">Compare the before and after plans.</small></div><button id="reveal" type="button" aria-pressed="false" hidden>Reveal edits</button></div>
+ </section>
+</section>
+<section aria-labelledby="metrics-heading" class="metrics-section">
+ <div class="section-head"><div><h2 id="metrics-heading">Pipeline activity</h2></div><div class="switch" role="group" aria-label="Metric source"><button type="button" data-scope="published" aria-pressed="true">Published run</button><button type="button" data-scope="browser" aria-pressed="false">This browser</button></div></div>
+ <div class="metric-line" id="metrics" aria-live="polite">
+   <div><span>Images generated</span><strong id="images">—</strong></div>
+   <div><span>Questions generated</span><strong id="questions">—</strong></div>
+   <div><span>Responses scored</span><strong id="responses">—</strong></div>
+   <div><span>Answer accuracy</span><strong id="accuracy">—</strong></div>
+ </div>
+ <div class="source-row"><p id="metric-source">Loading the recorded benchmark…</p><a id="view-report" href="downloads/studio/qwen-report.html">View benchmark report</a></div>
+</section>
+<section aria-labelledby="tasks-heading" class="examples-section">
+ <div class="section-head"><div><h2 id="tasks-heading">Explore a task</h2><p>Open a task in Live Demo to generate a fresh case.</p></div></div>
+ <div class="examples-grid">
+  <a class="task-card" href="live.html?skill=geometry&amp;task=chartmatch"><div class="task-preview"><img src="examples/chartmatch.png" alt="" width="820" height="356" loading="lazy"></div><div class="task-copy"><span>Geometric reasoning</span><h3>Match chart proportions</h3></div></a>
+  <a class="task-card" href="live.html?skill=patterns&amp;task=wallpaper"><div class="task-preview"><img src="examples/wallpaper.png" alt="" width="820" height="356" loading="lazy"></div><div class="task-copy"><span>Symmetry &amp; patterns</span><h3>Spot the odd pattern</h3></div></a>
+  <a class="task-card" href="live.html?skill=sequences&amp;task=columns"><div class="task-preview"><img src="examples/columns.png" alt="" width="820" height="356" loading="lazy"></div><div class="task-copy"><span>Sequences &amp; transforms</span><h3>Predict the next panel</h3></div></a>
+ </div></section>
+</main>
+<footer class="home-footer"><span>Visual Task Factory</span><a href="framework.html">Methods &amp; downloads</a></footer>
+</body></html>

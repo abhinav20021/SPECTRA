@@ -1,0 +1,42 @@
+name: Visual benchmark
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  visual-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Run the generated Studio pilot
+        run: node framework/cli.cjs pipeline --suite suites/studio-demo.json --out artifacts/studio-demo
+      - name: Unpack the frozen regression set
+        run: |
+          mkdir -p artifacts/frozen
+          unzip -q dist/downloads/sample-dataset.zip -d artifacts/frozen
+      - name: Evaluate the current local adapter
+        run: node framework/cli.cjs evaluate --dataset artifacts/frozen --out artifacts/candidate
+      - name: Compare skill and pair scores with the checked-in reference
+        run: node framework/cli.cjs compare --baseline dist/downloads/reference-report.json --candidate artifacts/candidate/report.json --max-drop 0.05 --out artifacts/comparison.json
+      - name: Verify the inspection benchmark and its false-clear regression
+        run: |
+          mkdir -p artifacts/panel-frozen
+          unzip -q dist/downloads/inspection/dataset.zip -d artifacts/panel-frozen
+          node framework/cli.cjs evaluate --dataset artifacts/panel-frozen --out artifacts/panel-candidate
+          node framework/cli.cjs compare --baseline dist/downloads/inspection/fixed-probe-baseline.json --candidate artifacts/panel-candidate/report.json --out artifacts/panel-comparison.json
+          node -e "const old=require('./dist/downloads/inspection/fixed-probe-baseline.json').inspectionRisk; const now=require('./artifacts/panel-candidate/report.json').inspectionRisk; if(now.falseClear>old.falseClear || now.abstained>old.abstained) process.exit(1)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-evaluation
+          path: |
+            artifacts/studio-demo/run
+            artifacts/candidate
+            artifacts/comparison.json
+            artifacts/panel-candidate
+            artifacts/panel-comparison.json
