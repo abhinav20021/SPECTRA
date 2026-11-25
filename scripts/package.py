@@ -7,6 +7,9 @@ from zipfile import ZIP_DEFLATED, ZipFile
 root = Path(__file__).resolve().parents[1]
 dist = root / "dist"
 html = (dist / "studio.html").read_text()
+# Preserve old shared inspection cases while returning new visits to the Studio.
+compat = """<script>if(new URLSearchParams(location.search).has('station'))location.replace('inspection.html'+location.search+location.hash)</script>"""
+(dist / "index.html").write_text(html.replace("</title>", "</title>" + compat, 1))
 font = b64encode((dist / "fonts/inter-latin.woff2").read_bytes()).decode()
 style = (dist / "style.css").read_text().replace("fonts/inter-latin.woff2", "data:font/woff2;base64," + font)
 html = html.replace('<link rel="stylesheet" href="style.css">', '<style>' + style + '</style>')

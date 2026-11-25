@@ -25,7 +25,8 @@ async function getAdapter(options={}) {
     }
   };
   if(kind==='openai'){
-    const instruction=options.families?.some(f=>f.startsWith('panel_'))?panelInstruction:legacyInstruction;
+    const studio=options.families?.some(f=>skills.labFamilies[f]);
+    const instruction=studio?'Return only the answer in the format requested in the question.':options.families?.some(f=>f.startsWith('panel_'))?panelInstruction:legacyInstruction;
     const model=options.model,apiKey=process.env.OPENAI_API_KEY;
     const base=new URL(process.env.OPENAI_BASE_URL||'https://api.openai.com/v1');
     ensure(!base.username&&!base.password&&!base.search&&!base.hash,'Use a base URL without credentials, query, or fragment.');
@@ -38,13 +39,13 @@ async function getAdapter(options={}) {
       async predict({png,question},{signal}){
         const headers={'Content-Type':'application/json'};
         if(apiKey)headers.Authorization='Bearer '+apiKey;
+        const textPart={type:'text',text:question+' '+instruction};
+        const imagePart={type:'image_url',image_url:{url:'data:image/png;base64,'+png.toString('base64')}};
+        const content=studio?[imagePart,textPart]:[textPart,imagePart];
         let response;
         try{
           response=await fetch(endpoint,{method:'POST',headers,signal,redirect:'error',
-            body:JSON.stringify({model,messages:[{role:'user',content:[
-              {type:'text',text:question+' '+instruction},
-              {type:'image_url',image_url:{url:'data:image/png;base64,'+png.toString('base64')}}
-            ]}]})});
+            body:JSON.stringify({model,messages:[{role:'user',content}]})});
         }catch(cause){const error=new Error('Model endpoint connection failed.');error.retryable=true;throw error;}
         if(!response.ok){
           await response.body?.cancel();

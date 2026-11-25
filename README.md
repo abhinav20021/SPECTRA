@@ -2,9 +2,45 @@
 
 Visual Task Factory generates synthetic visual questions, validates their answers against encoded PNGs, and evaluates multimodal models on a frozen dataset. The Node.js framework runs locally or in CI. The browser studio provides an interactive presentation of the same task families.
 
-## Wiring panel inspection
+## Live Evaluation Studio
 
-The flagship demo tests a practical decision: would a vision model clear a defective assembly? Every top-view wiring panel contains the same five inspection stations. Each question targets one station. The other four give the model realistic visual distractors within the diagram.
+Open `dist/studio.html`, the site root, or the single-file `dist/visual-task-factory.html`. Start with the warehouse bin audit. **Generate sample** creates a new scene and question from a random seed. **Run evaluation** tests the displayed sample. **Generate & test live** performs both operations with one click. **Browse all tasks** opens the searchable library. Selecting **Auto-generate task** also varies the task type within a skill, including across batch runs.
+
+The Studio has seven verticals and 29 task types. Chart reading, object counting and spatial reasoning retain their nine existing types. The four additions implement the following 20 procedural tasks.
+
+| Vertical | Generated task types |
+| --- | --- |
+| Geometric reasoning | Positional count, area/perimeter/angle/length sorting, overlapping-sheet stack count, pie-slice ordering, pie-to-bar comparison |
+| Counting and measurement | Venn region sums, rectangle and square counting in a composite grid, tiled line length, path intersections, bin-board recoloring |
+| Symmetry and patterns | Mirror-axis classification, mirrored tile completion, frieze oddity, wallpaper oddity |
+| Sequences and transformations | Transform result, transform inference, similarity under rotation/reflection/uniform scale, rotation sequence, arithmetic dot sequence, independent column progressions |
+
+Generation uses deterministic rules. The selected task, difficulty and seed sample scene data and question parameters. In a warehouse audit, the question specifies a named bay, rows and optionally the color the bin had before the change. The original and restyled layouts share a key. The edited version changes one relevant bin on the after board, preserving the before board. Some tasks, such as identifying a symmetry outlier, share a question form across many different generated puzzles.
+
+The source solver and the raster reader must agree on each image. During evaluation the browser encodes each canvas as a PNG, decodes those exact bytes, checks its visible measurements again, and then submits the PNG and question to the selected evaluator. The local image baseline uses separate calibration examples and coarse image features. Live API mode accepts an OpenAI-compatible vision endpoint, including a local llama.cpp server, subject to the browser and endpoint's cross-origin configuration. The key stays in tab memory. Run history retains exact stimulus PNGs, the question, raw responses, references and measurement evidence. Previous runs can be inspected or exported as JSON.
+
+The frieze and wallpaper tasks cover translation-only and half-turn groups with aligned periodic strips and patches. The shape counting task enumerates all squares or all axis-aligned rectangles within a composite grid. These are original implementations of task types described by SPHINX. [SPHINX project and paper](https://maveryn.github.io/sphinx/)
+
+### Run the new tasks from the command line
+
+```sh
+npm ci
+npm run studio
+```
+
+This generates, reopens and scores 120 PNGs from all 20 new types at two difficulties. The three variants of one underlying challenge are related observations. To freeze a smaller set from four different task types, or to limit a suite to named tasks, use the optional `tasks` map in `suites/studio-demo.json`.
+
+```sh
+node framework/cli.cjs generate --suite suites/studio-demo.json --out artifacts/studio-demo
+node framework/cli.cjs verify --dataset artifacts/studio-demo
+node framework/cli.cjs evaluate --dataset artifacts/studio-demo --adapter openai --model YOUR_MODEL_ID --out artifacts/studio-model
+```
+
+The framework page links to a recorded Studio-button run, the model's 12-image pilot report and the exact frozen pilot dataset. To repeat a chart or warehouse run with new images, open the Studio and use **Generate & test live**.
+
+## Additional wiring panel benchmark
+
+The optional wiring panel benchmark tests a practical decision. Would a vision model clear a defective assembly? Every top-view wiring panel contains the same five inspection stations. Each question targets one station. The other four give the model realistic visual distractors within the diagram.
 
 | Station | Reasoning skill | Visible change | Independent PNG check |
 | --- | --- | --- | --- |
@@ -27,7 +63,7 @@ npm ci
 npm run inspection
 ```
 
-The local baseline uses fixed image probes and runs without model downloads. An additional image-blind control always clears the station. It earns 17/30 correct on this suite and 0/10 correct original/edit pairs, and it misses all 13 defective cases. To score another model on the exact released inputs, extract `dist/downloads/inspection/dataset.zip` into a new directory and point `vtf evaluate` at it. The starter reports, every raw model reply, the stimuli, and the per-image keys are in the source archive. Open `dist/index.html` even offline to replay recorded trials. Use **Find a false clear** to locate a recorded single-edit pair where the model explicitly accepted a defective station. It checks the original and edited image in each group and prioritizes pairs where the model cleared both. After revealing the verdict, **Mark edit location** outlines the bounding box of the pixels that actually changed. Use **Link to this pair** to reopen the exact case. Choose **Generate a panel** for a new seeded panel evaluated by the fixed-probe baseline. Zoom crops are for display only. Each evaluated model received the complete panel.
+The local baseline uses fixed image probes and runs without model downloads. An additional image-blind control always clears the station. It earns 17/30 correct on this suite and 0/10 correct original/edit pairs, and it misses all 13 defective cases. To score another model on the exact released inputs, extract `dist/downloads/inspection/dataset.zip` into a new directory and point `vtf evaluate` at it. The starter reports, every raw model reply, the stimuli, and the per-image keys are in the source archive. Open `dist/inspection.html` even offline to replay recorded wiring-panel trials. Use **Find a false clear** to locate a recorded single-edit pair where the model explicitly accepted a defective station. It checks the original and edited image in each group and prioritizes pairs where the model cleared both. After revealing the verdict, **Mark edit location** outlines the bounding box of the pixels that actually changed. Use **Link to this pair** to reopen the exact case. Choose **Generate a panel** for a new seeded panel evaluated by the fixed-probe baseline. Zoom crops are for display only. Each evaluated model received the complete panel.
 
 The closed-choice runs use local llama.cpp build b12726, greedy decoding, seed 17, one image per request, and a grammar accepting exactly Yes/No or one of the seven legal pin counts. Only the question and PNG accompany the request. The free-response trial uses the OpenAI-compatible adapter, text followed by image, greedy generation and a 32-token server cap. It separately measures the ability to return a usable response. Prompt order and decoding both differ across these protocols. Compare model performance within the same protocol.
 
@@ -151,6 +187,6 @@ The included GitHub Actions workflow runs the test suite, evaluates the local ad
 
 ## Interactive studio and source
 
-Open `dist/studio.html` to launch the general studio or `dist/visual-task-factory.html` for its single-file offline edition. **Run three-skill demo** presents nine images. **Inspect checks** reveals the evidence behind an answer. **Framework** links to the source, dataset and a completed example report.
+Open `dist/studio.html` to launch the general studio or `dist/visual-task-factory.html` for its single-file offline edition. **Run all 7 skills** presents 21 images. **Inspect checks** reveals the evidence behind an answer. **Framework** links to the source, dataset and a completed example report.
 
 `dist/engine.js` and `dist/skills.js` implement shared generation, verification and local baselines. `framework/` contains the Node runner, adapters, dataset IO and scoring. `npm test` exercises generated stimuli, checkpoint resumption, corrupted data, protocol payloads, provider errors, imports and regressions. Run `python scripts/package.py` after edits to rebuild the offline studio and downloadable source bundle. Inter's license is in `dist/fonts/LICENSE.txt`.

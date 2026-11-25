@@ -11,7 +11,9 @@ const paths={
 };
 document.querySelectorAll('[data-icon]').forEach(el=>{el.innerHTML='<svg class="ico" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="'+paths[el.dataset.icon]+'"/></svg>'});
 const safe=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let family='charts',comparison=false;
+let family='quantities',comparison=false;
+const skillCount=Object.keys(S.families).length;
+const selectedTask=(f,s,wanted)=>wanted!=='auto'?wanted:Object.keys(S.families[f].types)[Math.floor(E.random(s^0x53a19)()*Object.keys(S.families[f].types).length)];
 let seed=82041, active=0, challenge=null, runState=null, sceneIndex=0, control=null, runError='', guesses={};
 let history=[],memory=new Map(),db=null,noticeTimer;
 const pct=(n,d)=>d?Math.round(n/d*100)+'%':'—';
@@ -20,7 +22,7 @@ const formatDate=t=>new Date(t).toLocaleString(undefined,{month:'short',day:'num
 function selectFamily(value,key){
   family=value;
   const def=S.families[family];
-  $('question').innerHTML=Object.entries(def.types).map(([id,label])=>'<option value="'+id+'">'+label+'</option>').join('');
+  $('question').innerHTML='<option value="auto">Auto-generate task</option>'+Object.entries(def.types).map(([id,label])=>'<option value="'+id+'">'+label+'</option>').join('');
   if(key&&Object.hasOwn(def.types,key))$('question').value=key;
   document.querySelectorAll('.skillcard').forEach(b=>{const chosen=b.dataset.family===family;b.classList.toggle('is-active',chosen);b.setAttribute('aria-pressed',String(chosen));});
   $('difficulty').options[1].textContent=family==='charts'?'Close call':'Fine detail';
@@ -34,6 +36,12 @@ document.querySelectorAll('.skillcard').forEach(button=>{
   }else if(skill==='counting'){
     dot(28,23,11,'#5d8ed4');dot(62,55,11,'#5d8ed4');dot(98,22,11,'#5d8ed4');g.fillStyle='#80af9b';g.fillRect(20,47,20,20);
     poly([[61,11],[75,34],[47,34]],'#d78e56');poly([[100,42],[114,64],[86,64]],'#d78e56');
+  }else if(S.labFamilies[skill]){
+    const purple='#8271cf',green='#65a894',gold='#d99a5c';
+    if(skill==='geometry'){poly([[10,59],[33,16],[51,59]],purple);dot(83,39,18,green);}
+    if(skill==='quantities'){for(let i=0;i<12;i++){g.fillStyle=[purple,green,gold][(i*7+Math.floor(i/4))%3];g.fillRect(21+i%4*21,11+Math.floor(i/4)*21,17,17);}}
+    if(skill==='patterns'){[[25,24],[89,24],[43,40],[71,40],[25,56],[89,56]].forEach(([x,y],i)=>dot(x,y,7,i<2?purple:green));}
+    if(skill==='sequences'){[0,1,2].forEach((n)=>{for(let i=0;i<=n;i++)dot(23+n*36,52-i*15,6,[purple,gold,green][n]);});}
   }else{
     poly(Array.from({length:10},(_,i)=>{const a=i*Math.PI/5-Math.PI/2,r=i%2?8:19;return [61+Math.cos(a)*r,39+Math.sin(a)*r];}),'#cf9c34');
     dot(21,40,10,'#6292ce');poly([[103,30],[114,41],[103,52],[92,41]],'#9b75ce');
@@ -57,7 +65,7 @@ function draw(){
   const t=challenge.tasks[active],c=$('chart');c.getContext('2d').drawImage(t.canvas,0,0);
   const def=S.families[challenge.family];
   c.setAttribute('aria-label',t.variant+' image for '+def.name+'. Measurements are available under Inspect checks.');
-  $('variantNote').textContent=def.notes[active];$('questionText').textContent=challenge.prompt;$('seedText').textContent=pad(challenge.seed);
+  $('variantNote').textContent=challenge.question==='recolor'&&active===2?'One bin edited in the after plan · same before plan':def.notes[active];$('questionText').textContent=challenge.prompt;$('seedText').textContent=pad(challenge.seed);
   document.querySelectorAll('.variant').forEach((b,i)=>{
     b.lastChild.textContent=def.variants[i];b.classList.toggle('selected',i===active);b.setAttribute('aria-pressed',String(i===active));
   });
@@ -86,7 +94,16 @@ function draw(){
   }
 }
 $('compare').onclick=()=>{comparison=!comparison;if(comparison&&!active)active=2;draw();};
-function regenerate(){challenge=S.create(family,seed,$('question').value,$('difficulty').value);draw();results();}
+function updatePipeline(c,verified,score){
+  $('pipeScene').textContent=S.families[c.family].name+' · #'+c.seed;
+  $('pipeQuestion').textContent=S.families[c.family].types[c.question];
+  $('pipeVerify').textContent=verified;
+  $('pipeScore').textContent=score;
+}
+function regenerate(){
+  challenge=S.create(family,seed,selectedTask(family,seed,$('question').value),$('difficulty').value);
+  updatePipeline(challenge,'3 canvas answers agree','Ready');draw();results();
+}
 document.querySelectorAll('.variant').forEach((b,i)=>b.onclick=()=>{active=i;if(!i)comparison=false;draw();});
 $('generate').onclick=()=>{const a=new Uint32Array(1);crypto.getRandomValues(a);setSeed(a[0]);$('live').textContent='New verified challenge generated.';};
 $('seedEdit').onclick=()=>{showDialog('Replay a challenge','<form id="seedForm"><label for="seedInput">Challenge seed</label><input id="seedInput" required inputmode="numeric" pattern="[0-9]{1,10}" maxlength="10" value="'+seed+'"><p class="fieldnote">Use the same skill, seed, question type and difficulty to reproduce a challenge.</p><div class="dialogbuttons"><button class="btn primary">Load challenge</button></div></form>');
@@ -95,6 +112,9 @@ function saveFile(href,name){const a=document.createElement('a');a.href=href;a.d
 $('downloadImg').onclick=()=>saveFile(challenge.tasks[active].canvas.toDataURL('image/png'),challenge.family+'-'+challenge.seed+'-'+active+'.png');
 $('verify').onclick=()=>{
  const t=challenge.tasks[active],def=S.families[challenge.family];let rows,header;
+ if(S.labFamilies[challenge.family]){
+   showDialog('Independent answer checks','<div class="helpblock"><h3>'+safe(def.types[challenge.question])+'</h3><p>'+safe(challenge.prompt)+'</p></div><details><summary>Reveal answer and measurements</summary><div class="dialogpair"><strong>Source answer '+safe(t.key)+'</strong><span class="chip good">Pixel answer '+safe(t.check.answer)+'</span></div><p class="labmethod">'+safe(t.check.readings[0].detail)+'</p><details><summary>Generated scene data</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+safe(JSON.stringify(t.rows,null,2))+'</pre></details></details>');return;
+ }
  if(challenge.family==='charts'){
    const reads=new Map(t.check.readings.map(r=>[r.label,r.pixels]));
    header=['Region','Source units','Measured height'];rows=t.rows.map(r=>[r.label,r.value,reads.get(r.label)+' px']);
@@ -105,6 +125,7 @@ $('verify').onclick=()=>{
  showDialog('Independent answer checks','<div class="helpblock"><h3>'+safe(t.variant)+' · '+def.name+'</h3><p>'+def.method+'</p></div><details style="margin-top:12px"><summary>Reveal the answer and measurements</summary><div class="dialogpair"><span>Source answer <strong>'+safe(t.key)+'</strong></span><span class="chip good">Pixel answer '+safe(t.check.answer)+'</span></div><canvas id="pixelOverlay" width="820" height="356" aria-label="Detected image elements with relevant measurements outlined in green"></canvas><p class="fieldnote">Green outlines mark the measurements used for this answer.</p><div class="answerlist"><table class="checktable"><tr>'+header.map(x=>'<th>'+x+'</th>').join('')+'</tr>'+rows.map(row=>'<tr>'+row.map(v=>'<td>'+safe(v)+'</td>').join('')+'</tr>').join('')+'</table></div></details>');
  const overlay=$('pixelOverlay').getContext('2d');overlay.drawImage(t.canvas,0,0);
  for(const reading of t.check.readings){
+   if(!reading.bounds)continue;
    const [x,y,w,h]=reading.bounds;
    const selected=challenge.family==='charts'?reading.label===t.key:reading.selected;
    overlay.strokeStyle=selected?'#087750':'#8e8d9977';overlay.lineWidth=selected?3:1;
@@ -115,57 +136,81 @@ $('verify').onclick=()=>{
 const guessButton=document.createElement('button');guessButton.className='guessbtn';guessButton.textContent='Try it yourself';document.querySelector('.prompt').append(guessButton);
 guessButton.onclick=()=>{
  const t=challenge.tasks[active],guessKey=[challenge.family,challenge.seed,challenge.question,active].join('-');
- const form=challenge.choices?'<div class="choices">'+challenge.choices.map(s=>'<button class="btn white" data-guess="'+s+'">'+s+'</button>').join('')+'</div>':'<form id="numGuess" class="numguess"><input type="number" min="0" max="99" step="1" required id="guessN" aria-label="Object count" placeholder="Your count"><button class="btn primary">Check guess</button></form>';
+ const form=challenge.choices?'<div class="choices">'+challenge.choices.map(s=>'<button class="btn white" data-guess="'+s+'">'+s+'</button>').join('')+'</div>':'<form id="numGuess" class="numguess"><input type="number" min="0" max="9999" step="1" required id="guessN" aria-label="Numeric answer" placeholder="Your answer"><button class="btn primary">Check guess</button></form>';
  showDialog('Your prediction','<div class="helpblock"><h3>'+safe(challenge.prompt)+'</h3><p>'+t.variant+' · seed '+pad(challenge.seed)+'</p></div>'+form+'<p id="guessFeedback" class="fieldnote" role="status"></p>');
  const compare=v=>{guesses[guessKey]=v;$('guessFeedback').textContent=v===t.key?'Correct. Both checks confirm '+t.key+'.':'You picked '+v+'. The verified answer is '+t.key+'.';};
  if(guesses[guessKey]!==undefined)compare(guesses[guessKey]);
  if($('numGuess'))$('numGuess').onsubmit=e=>{e.preventDefault();compare(String(Number($('guessN').value)));};
  document.querySelectorAll('[data-guess]').forEach(b=>b.onclick=()=>compare(b.dataset.guess));
 };
-$('method').onclick=()=>showDialog('How the evaluation works','<div class="helpblock"><h3>Try the three-skill demo</h3><p>One click runs three questions across nine images. Explore a single skill with the question and batch controls, or make your own prediction in the viewer.</p></div><div class="helpblock"><h3>Make one controlled change</h3><p>Each question gets an original, a restyled image with the same answer, and an edit with a different answer. The edit swaps two values, adds a matching object, or exchanges two neighbors.</p></div><div class="helpblock"><h3>Verify the rendered pixels</h3><p>The chart reader measures bar heights. The scene reader isolates colored objects and measures their silhouettes and positions. Each pixel answer must match the answer computed from the source.</p></div><div class="helpblock"><h3>Evaluate independently</h3><p>The local baseline uses coarse images, nearest-neighbor ranking for charts, and shape-template matching for scenes. Live vision models receive only one question and PNG per request. Pair scores require both responses to be correct.</p></div>');
+$('method').onclick=()=>showDialog('How the live pipeline works','<div class="helpblock"><h3>Generate a scene and a question</h3><p>A seed samples a structured scene. Task rules compose a question using its public parameters, such as the target color, inspected rows, direction or missing tile.</p></div><div class="helpblock"><h3>Read back the image</h3><p>Each challenge contains an original, a restyled control and an answer-changing scene. When a run starts, every PNG is decoded and measured independently before inference.</p></div><div class="helpblock"><h3>Evaluate the selected model</h3><p>The local baseline reads image features. New reasoning tasks use nearest-neighbor thumbnail matching against separate calibration examples. A live vision endpoint receives one PNG and its question. Results include the raw reply, reference and paired scores.</p></div><div class="helpblock"><h3>Pattern coverage</h3><p>Frieze and wallpaper tasks distinguish translation-only and half-turn groups in periodic strips and two-dimensional patches.</p></div>');
+$('library').onclick=()=>{
+ const entries=Object.entries(S.families);
+ const total=entries.reduce((n,[,def])=>n+Object.keys(def.types).length,0);
+ const groups=entries.map(([f,def])=>'<section class="taskgroup"><h3>'+safe(def.name)+'</h3><div>'+Object.entries(def.types).map(([k,name])=>'<button class="taskpick" data-f="'+safe(f)+'" data-k="'+safe(k)+'">'+safe(name)+'</button>').join('')+'</div></section>').join('');
+ showDialog('Task library · '+total+' types','<label for="findTask">Find a task</label><input id="findTask" type="search" placeholder="Search task or skill">'+groups+'<p id="noTasks" hidden>No matching tasks.</p>');
+ const buttons=[...$('dialogBody').querySelectorAll('.taskpick')];
+ for(const b of buttons)b.onclick=()=>{$('dialog').close();selectFamily(b.dataset.f,b.dataset.k);setSeed(seed);};
+ $('findTask').oninput=()=>{const needle=$('findTask').value.trim().toLowerCase();
+  for(const b of buttons)b.hidden=!(S.families[b.dataset.f].name+' '+b.textContent).toLowerCase().includes(needle);
+  $('dialogBody').querySelectorAll('.taskgroup').forEach(group=>group.hidden=![...group.querySelectorAll('button')].some(b=>!b.hidden));
+  $('noTasks').hidden=buttons.some(b=>!b.hidden);
+ };
+};
 function updateConfig(){
  const remote=$('model').value==='openai',n=Number($('size').value)*3;
- $('tourLabel').textContent=remote?'Run demo · 9 requests':'Run three-skill demo';
+ $('tourLabel').textContent=remote?'All skills · '+skillCount*3+' requests':'Run all '+skillCount+' skills';
  $('remoteControls').hidden=!remote;$('runSummary').textContent=remote?n+' images · '+n+' API requests':n+' images per run';
 }
 $('model').onchange=$('size').onchange=updateConfig;
 $('question').onchange=$('difficulty').onchange=()=>setSeed(seed);
 function lock(busy){
  document.querySelectorAll('.skillcard').forEach(b=>b.disabled=busy);
- ['tour','generate','seedEdit','model','question','difficulty','size','apiKey','modelName','run','navHistory'].forEach(id=>$(id).disabled=busy);
+ ['tour','generate','library','freshRun','apiBase','seedEdit','model','question','difficulty','size','apiKey','modelName','run','navHistory'].forEach(id=>$(id).disabled=busy);
  $('cancel').hidden=!busy;$('runLabel').textContent=busy?'Evaluating…':'Run evaluation';
 }
+function apiSettings(){
+ const name=$('modelName').value.trim(),key=$('apiKey').value.trim(),u=new URL($('apiBase').value.trim());
+ if(u.username||u.password||u.search||u.hash)throw Error('Use an API base URL without credentials, query or fragment.');
+ const local=['localhost','127.0.0.1','[::1]'].includes(u.hostname);
+ if(u.protocol!=='https:'&&!(local&&u.protocol==='http:'))throw Error('Use HTTPS or a local HTTP inference server.');
+ if(!name||(!key&&u.hostname==='api.openai.com'))throw Error('Enter the model ID and your OpenAI API key.');
+ return {name,key,endpoint:u.href.replace(/\/$/,'')+'/chat/completions'};
+}
+function loadPng(url){return new Promise((resolve,reject)=>{
+ const img=new Image();img.onload=()=>{try{const c=E.surface(E.W,E.H);c.getContext('2d').drawImage(img,0,0);resolve(c);}catch(e){reject(e);}};
+ img.onerror=()=>reject(Error('Failed to decode the generated PNG.'));img.src=url;
+});}
 async function remoteAnswer(image,c,settings,signal) {
  const request=new AbortController(),onStop=()=>request.abort();
  signal.addEventListener('abort',onStop,{once:true});if(signal.aborted)request.abort();
  const timer=setTimeout(()=>request.abort('timeout'),60000);
  try{
-  const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',signal:request.signal,
-   headers:{'Content-Type':'application/json','Authorization':'Bearer '+settings.key},
+  const headers={'Content-Type':'application/json'};if(settings.key)headers.Authorization='Bearer '+settings.key;
+  const suffix=c.choices?' Reply only with one allowed answer: '+c.choices.join(' / ')+'.':' Reply with one whole number in digits.';
+  const r=await fetch(settings.endpoint,{method:'POST',signal:request.signal,redirect:'error',headers,
    body:JSON.stringify({model:settings.name,messages:[{role:'user',content:[
-    {type:'text',text:c.prompt+(c.family==='counting'?' Reply with one whole number in digits.':c.family==='spatial'?' Reply with one shape name.':' Reply with one region label.')},
-    {type:'image_url',image_url:{url:image}}
+    {type:'image_url',image_url:{url:image}},{type:'text',text:c.prompt+suffix}
    ]}]})});
-  if(!r.ok)throw Error('OpenAI returned HTTP '+r.status+'. '+({401:'Check the API key.',403:'Check project and model access.',404:'Check the model ID.',429:'Check request limits and available credit.'}[r.status]||'Check the model and try again.'));
+  if(!r.ok)throw Error('Vision endpoint returned HTTP '+r.status+'. '+({401:'Check the API key.',403:'Check project and model access.',404:'Check the model ID.',429:'Check request limits and available credit.'}[r.status]||'Check the model and try again.'));
   const json=await r.json(),raw=json.choices?.[0]?.message?.content;
   if(typeof raw!=='string'||!raw.trim())throw Error('The provider returned no text response.');
   const clean=raw.trim().replace(/^[\s"'*`]+|[\s"'*`.!]+$/g,'').toLowerCase();
-  return {raw,answer:c.family==='counting'?(/^\d{1,3}$/.test(clean)?String(Number(clean)):null):(c.choices.find(s=>s.toLowerCase()===clean)||null)};
- }catch(error){if(!signal.aborted&&request.signal.aborted)throw Error('OpenAI did not respond within 60 seconds.');throw error;}
+  return {raw,answer:S.labFamilies[c.family]?S.labNormalize(raw,c.question):c.family==='counting'?(/^\d{1,3}$/.test(clean)?String(Number(clean)):null):(c.choices.find(s=>s.toLowerCase()===clean)||null)};
+ }catch(error){if(!signal.aborted&&request.signal.aborted)throw Error('The vision endpoint did not respond within 60 seconds.');throw error;}
  finally{clearTimeout(timer);signal.removeEventListener('abort',onStop);}
 }
 async function evaluate(tour=false){
- const config={seed,family,mode:tour?'tour':'single',question:$('question').value,difficulty:$('difficulty').value,size:tour?3:Number($('size').value),batchSize:Number($('size').value),evaluator:$('model').value};
- const settings={name:$('modelName').value.trim(),key:$('apiKey').value.trim()};
- if(config.evaluator==='openai'&&(!settings.key||!settings.name)){note('Enter a model ID and API key to run the live evaluation.');(!settings.name?$('modelName'):$('apiKey')).focus();return;}
+ const config={seed,family,mode:tour?'tour':'single',question:selectedTask(family,seed,$('question').value),taskMode:$('question').value,difficulty:$('difficulty').value,size:tour?skillCount:Number($('size').value),batchSize:Number($('size').value),evaluator:$('model').value};
+ let settings={};if(config.evaluator==='openai')try{settings=apiSettings();config.endpoint=settings.endpoint;}catch(err){note(err.message);return;}
  const current=new AbortController();control=current;lock(true);runError='';runState=null;sceneIndex=0;active=0;
- const plan=tour?S.tourPlan(seed,family,config.question):Array.from({length:config.size},(_,i)=>({family,seed:E.nextSeed(seed,i),key:config.question}));
+ const plan=tour?S.tourPlan(seed,family,config.question):Array.from({length:config.size},(_,i)=>({family,seed:E.nextSeed(seed,i),key:selectedTask(family,E.nextSeed(seed,i),config.taskMode)}));
  comparison=false;
- const model=config.evaluator==='openai'?settings.name:'Local vision baseline',items=[];
+ const model=config.evaluator==='openai'?settings.name:'Local image baseline',items=[];
  let done=0,phase='';
  function progress(){$('resultState').textContent='Running';$('resultState').className='state';$('resultBody').innerHTML='<div class="resultmeta">Evaluating image '+Math.min(done+1,config.size*3)+' of '+config.size*3+' · '+safe(model)+'</div><div class="progress"><span style="width:'+done/(config.size*3)*100+'%"></span></div>'; }
  try {
-  challenge=S.create(family,seed,config.question,config.difficulty);draw();progress();
+  if(challenge.family!==family||challenge.seed!==seed||challenge.question!==config.question||challenge.difficulty!==config.difficulty)challenge=S.create(family,seed,config.question,config.difficulty);draw();progress();
   for(let i=0;i<config.size;i++){
    const step=plan[i];
    const c=i===0?challenge:S.create(step.family,step.seed,step.key,config.difficulty);
@@ -176,25 +221,33 @@ async function evaluate(tour=false){
     progress();
     await new Promise(ok=>setTimeout(ok,12));current.signal.throwIfAborted();
     const image=t.canvas.toDataURL('image/png');
-    const started=performance.now();
-    const raw=config.evaluator==='local'?S.predict(t.canvas,c.prompt):null;
-    const response=raw?{raw,answer:raw}:await remoteAnswer(image,c,settings,current.signal);
+    const decoded=await loadPng(image);let response;const started=performance.now();
+    try{
+      const measured=c.family==='charts'?E.verifyImage(decoded,c.question):S.pixelCheck(decoded,c.family,c.question,c.prompt);
+      if(measured.answer!==t.key||JSON.stringify(measured.readings)!==JSON.stringify(t.check.readings))throw Error('Exported PNG failed the independent check.');
+      updatePipeline(c,(done+1)+' / '+(config.size*3)+' PNGs checked','Testing '+model);
+      if(config.evaluator==='local'){const raw=S.predict(decoded,c.prompt);response={raw,answer:raw};}
+      else response=await remoteAnswer(image,c,settings,current.signal);
+    }finally{decoded.width=1;}
     current.signal.throwIfAborted();response.latencyMs=Math.round(performance.now()-started);
     item.answers.push(response);item.keys.push(t.key);item.images.push(image);
-    item.evidence.push({variant:t.variant,source:t.rows,pixels:t.check.readings,pixelAnswer:t.check.answer});
+    item.evidence.push({pngVerified:true,variant:t.variant,source:t.rows,pixels:t.check.readings,pixelAnswer:t.check.answer});
     done++;
    }
    items.push(item);
   }
-  const record={version:2,id:crypto.randomUUID(),time:Date.now(),config,model,items,stats:E.score(items),skills:S.skillScores(items)};
+  const record={version:3,id:crypto.randomUUID(),time:Date.now(),config,model,items,stats:E.score(items),skills:S.skillScores(items)};
   await remember(record);runState=record;
   inspect(0,tour);$('live').textContent='Evaluation complete. '+record.stats.correct+' of '+record.stats.total+' correct.';
   (tour?document.querySelector('.preview'):$('results')).scrollIntoView({behavior:'smooth',block:tour?'center':'nearest'});
  }catch(err){
   if(tour){challenge=S.create(config.family,config.seed,config.question,config.difficulty);active=0;draw();}
-  runError=current.signal.aborted?'Run canceled after '+done+' of '+config.size*3+' images.':('Run stopped after '+done+' of '+config.size*3+' images. '+(err.message||'Request failed.'));results();$('live').textContent=runError;}
+  runError=current.signal.aborted?'Run canceled after '+done+' of '+config.size*3+' images.':('Run stopped after '+done+' of '+config.size*3+' images. '+(err.message||'Request failed.'));results();updatePipeline(challenge,done+' / '+(config.size*3)+' images scored','Incomplete');$('live').textContent=runError;}
  finally{control=null;lock(false);}
 }
+$('freshRun').onclick=()=>{if($('model').value==='openai')try{apiSettings();}catch(e){note(e.message);return;}
+ $('generate').click();return evaluate(false);
+};
 $('run').onclick=()=>evaluate(false);$('tour').onclick=()=>evaluate(true);$('cancel').onclick=()=>control?.abort();
 function metrics(s){
  return '<div class="metrics">'+[
@@ -207,7 +260,15 @@ function inspect(index,compare=runState.config.mode==='tour'){
  const r=runState,it=r.items[index],skill=it.family||'charts',key=it.type||r.config.question;
  sceneIndex=index;active=compare?2:0;comparison=compare;seed=it.seed;guesses={};
  selectFamily(skill,key);$('difficulty').value=r.config.difficulty;
- challenge=S.create(skill,seed,key,r.config.difficulty);draw();results();
+ challenge=S.create(skill,seed,key,r.config.difficulty);
+ updatePipeline(challenge,r.version>=3?r.stats.total+' PNGs checked':'Saved run',r.stats.correct+' / '+r.stats.total+' correct');draw();results();
+ const preview=challenge;
+ if(it.images?.length===3)Promise.all(it.images.map(loadPng)).then(images=>{
+   if(challenge!==preview||runState!==r){images.forEach(c=>c.width=1);return;}
+   preview.prompt=it.question;
+   preview.tasks=images.map((canvas,i)=>({canvas,variant:it.evidence[i].variant,key:it.keys[i],rows:it.evidence[i].source,check:{answer:it.evidence[i].pixelAnswer,readings:it.evidence[i].pixels}}));
+   draw();
+ }).catch(()=>note('A saved preview image could not be decoded.'));
 }
 $('nextSkill').onclick=()=>{
  if(!runState)return;
@@ -261,7 +322,7 @@ async function remember(r){
 function renderHistory(){
  const el=$('historyBody');
  if(!history.length){el.innerHTML='<div class="panel emptyhistory"><h2>No completed runs yet</h2><p>Run your first challenge in the studio to see the results here.</p><button class="btn white" id="startHistory">Open studio</button></div>';$('startHistory').onclick=()=>mode('studio');return;}
- el.innerHTML='<div class="panel">'+history.map(r=>'<div class="historyrow"><div class="historyitem"><span class="chip good">'+pct(r.stats.correct,r.stats.total)+'</span><div><strong>'+safe(r.model)+'</strong><p>#'+pad(r.config.seed)+' · '+r.stats.total+' images · '+(r.config.mode==='tour'?'Three-skill demo':S.families[r.config.family||'charts'].name)+' · '+formatDate(r.time)+'</p></div></div><button class="btn white" data-open="'+safe(r.id)+'">Inspect run</button></div>').join('')+'</div>';
+ el.innerHTML='<div class="panel">'+history.map(r=>'<div class="historyrow"><div class="historyitem"><span class="chip good">'+pct(r.stats.correct,r.stats.total)+'</span><div><strong>'+safe(r.model)+'</strong><p>#'+pad(r.config.seed)+' · '+r.stats.total+' images · '+(r.config.mode==='tour'?'Multi-skill demo':S.families[r.config.family||'charts'].name)+' · '+formatDate(r.time)+'</p></div></div><button class="btn white" data-open="'+safe(r.id)+'">Inspect run</button></div>').join('')+'</div>';
  el.querySelectorAll('[data-open]').forEach(b=>b.onclick=async()=>{
   try{
    const id=b.dataset.open,r=memory.get(id)||await request(db.transaction('runs').objectStore('runs').get(id));
@@ -271,5 +332,10 @@ function renderHistory(){
   }catch{note('This saved run could not be loaded.');}
  });
 }
+const initial=new URLSearchParams(window.location.search);
+const initialFamily=Object.hasOwn(S.families,initial.get('skill'))?initial.get('skill'):'quantities';
+const initialTask=initial.get('task')||(initialFamily==='quantities'?'recolor':'auto');
+selectFamily(initialFamily,initialTask);if(initial.get('difficulty')==='close')$('difficulty').value='close';
+if(initial.has('seed')&&/^\d{1,10}$/.test(initial.get('seed'))&&Number(initial.get('seed'))<=4294967295)seed=Number(initial.get('seed'));
 updateConfig();regenerate();
 })();

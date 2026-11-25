@@ -1,0 +1,26 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#152d32"><meta name="description" content="Test whether vision models catch assembly defects in synthetic wiring panels with independently verified answers.">
+<title>Wiring panel inspection · Visual Task Factory</title>
+<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="panel.css">
+<script defer src="engine.js"></script><script defer src="panel-scene.js"></script><script defer src="panel-inspection.js"></script><script defer src="panel-diff.js"></script><script defer src="panel-trials.js"></script><script defer src="panel-app.js"></script>
+</head><body class="inspection">
+<header class="top"><div class="topinner"><a class="brand" href="index.html"><span class="brandmark" aria-hidden="true"><i></i><i></i></span>Visual Task Factory</a><nav aria-label="Main navigation"><a class="nav active" aria-current="page" href="inspection.html">Inspection</a><a class="nav" href="studio.html">Studio</a><a class="nav" href="framework.html">Framework</a></nav></div></header>
+<main>
+<div class="paneltitle"><div><h1>Wiring panel inspection<span>.</span></h1><p>Would a vision model clear a defective assembly? Compare two panel images, then inspect the model’s call and the pixel measurements that verify it.</p></div><a class="sourcebtn" href="visual-task-factory-source.zip" download>Download framework</a></div>
+<section aria-label="Inspection station"><div class="stations" id="stations"></div></section>
+<section class="workbench" aria-labelledby="question"><div class="testbar">
+<label>Test source<select id="source"><option value="recorded">Recorded model trials</option><option value="generated">Generate a panel</option></select></label>
+<label>Difficulty<select id="difficulty"><option value="standard">Standard</option><option value="close">Fine detail</option></select></label>
+<label id="modelLabel">Model<select id="model"></select></label>
+<button id="findMiss" class="quietbtn">Find a false clear</button>
+<label id="seedLabel" hidden>Seed<input id="seed" type="number" min="0" max="4294967295" step="1" value="28"></label>
+<button class="quietbtn" id="newPanel" hidden>New seed</button></div>
+<div class="questionblock"><h2 id="question"></h2><p id="impact"></p></div>
+<div class="viewbar"><div role="group" aria-label="Choose comparison" class="switch"><button id="edit" aria-pressed="true">Single edit</button><button id="style" aria-pressed="false">Style control</button></div><div class="viewoptions"><label class="zoom" id="markLabel" hidden><input type="checkbox" id="mark" checked> Mark edit location</label><label class="zoom"><input type="checkbox" id="zoom" checked> Zoom to station</label></div></div>
+<div id="pair" class="pair"></div>
+<div class="humanrow"><span>Your call on the comparison station</span><div class="switch" role="group" aria-label="Your inspection decision"><button id="humanClear" aria-pressed="false">Clear</button><button id="humanHold" aria-pressed="false">Hold</button></div></div><div class="revealrow"><button id="reveal" class="reveal">Reveal inspection results</button><span id="context"></span><a id="caseLink" href="inspection.html">Link to this pair</a></div>
+<div id="verdicts" aria-live="polite"></div></section>
+<section class="benchresults"><div><h2>Recorded benchmark</h2><p>Every model saw the same 30 PNGs. A false clear means it accepted a defective station. Closed-choice trials require a legal answer. The free-response trial counts unparseable replies as incorrect.</p></div><div class="tablewrap"><table><thead><tr><th>Model</th><th>Correct</th><th>Correct edit pairs</th><th>False clears</th><th>False alarms</th><th>Unusable</th><th>Report</th></tr></thead><tbody id="records"></tbody></table></div></section>
+<details class="methodinfo"><summary>How the answers are independently verified</summary><p>A seeded generator records the intended assembly, renders a PNG, and computes the answer from the geometry, inventory, pattern, rotations, or graph. A separate program reopens the exported PNG and measures the visible marks. The dataset accepts an image when both answers agree, the restyled panel preserves the answer, and the single edit changes it.</p><p>These are synthetic top-view diagrams. Production photographs, glare, occlusion, and electrical performance require separate validation.</p><div><a href="downloads/inspection/dataset.zip" download>Download the frozen dataset</a> · <a href="framework.html">Run your own model</a></div></details>
+</main></body></html>

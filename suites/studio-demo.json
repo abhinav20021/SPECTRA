@@ -1,0 +1,29 @@
+{
+  "name": "studio-live-demo",
+  "seed": 10572,
+  "repeats": 1,
+  "families": [
+    "geometry",
+    "quantities",
+    "patterns",
+    "sequences"
+  ],
+  "tasks": {
+    "geometry": [
+      "chartmatch"
+    ],
+    "quantities": [
+      "recolor"
+    ],
+    "patterns": [
+      "wallpaper"
+    ],
+    "sequences": [
+      "columns"
+    ]
+  },
+  "difficulties": [
+    "standard"
+  ],
+  "gates": {}
+}

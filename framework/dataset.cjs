@@ -26,10 +26,18 @@ function validateSuite(suite) {
   for(const key of Object.keys(suite.gates||{})){
     if(key.includes('.'))ensure(suite.families.includes(key.split('.')[0]), 'Gate refers to an omitted family: '+key);
   }
-  return {name:suite.name,seed:suite.seed,repeats:suite.repeats,families:suite.families,difficulties:suite.difficulties};
+  const spec={name:suite.name,seed:suite.seed,repeats:suite.repeats,families:suite.families,difficulties:suite.difficulties};
+  if(suite.tasks!==undefined){
+    ensure(suite.tasks && typeof suite.tasks==='object'&&!Array.isArray(suite.tasks),'tasks must map families to task IDs.');
+    for(const [family,ids] of Object.entries(suite.tasks)){
+      ensure(suite.families.includes(family)&&Array.isArray(ids)&&ids.length&&new Set(ids).size===ids.length&&ids.every(id=>Object.hasOwn(skills.families[family].types,id)),'Invalid task selection for '+family);
+    }
+    spec.tasks=suite.tasks;
+  }
+  return spec;
 }
 function* groups(spec) {
-  for(const family of spec.families)for(const question of Object.keys(skills.families[family].types)){
+  for(const family of spec.families)for(const question of (spec.tasks?.[family]||Object.keys(skills.families[family].types))){
     for(const difficulty of spec.difficulties)for(let repeat=0;repeat<spec.repeats;repeat++){
       const group=hash(JSON.stringify([spec.seed,family,question,difficulty,repeat])).slice(0,24);
       yield {group,seed:parseInt(group.slice(0,8),16),family,question,difficulty,repeat};
@@ -39,8 +47,8 @@ function* groups(spec) {
 const sampleId=(group,index)=>hash(group+'-'+index).slice(0,24);
 const jsonLines=rows=>rows.map(row=>JSON.stringify(row)).join('\n')+'\n';
 const pngPath=(dir,id)=>path.join(dir,'public','images',id+'.png');
-function checkPixels(canvas,meta) {
-  return meta.family==='charts'?engine.verifyImage(canvas,meta.question):skills.pixelCheck(canvas,meta.family,meta.question);
+function checkPixels(canvas,meta,prompt) {
+  return meta.family==='charts'?engine.verifyImage(canvas,meta.question):skills.pixelCheck(canvas,meta.family,meta.question,prompt);
 }
 async function generate(suite,out) {
   const spec=validateSuite(suite);out=path.resolve(out);
@@ -90,12 +98,14 @@ async function verify(dir) {
       ensure(task?.id===id && label?.id===id && task.image==='images/'+id+'.png','Missing or misplaced sample: '+id);
       ensure(Object.entries(meta).every(([key,v])=>label[key]===v) && label.index===k &&
         label.variant===skills.families[meta.family].variants[k],'Invalid sample metadata: '+id);
-      ensure(task.question===skills.promptFor(meta.family,meta.question),'Question does not match its task: '+id);
+      ensure(task.question===skills.promptFor(meta.family,meta.question,meta.seed,meta.difficulty),'Question does not match its task: '+id);
+      if(skills.labFamilies[meta.family])ensure(label.source.query.text===task.question &&
+        JSON.stringify(label.source.query)===JSON.stringify(skills.labQuery(meta.question,meta.seed,meta.difficulty)), 'Stored query differs from public question: '+id);
       const png=await fs.readFile(pngPath(dir,id));
       ensure(hash(png)===task.sha256,'Image checksum mismatch: '+id);
       const canvas=await decode(png);
       let observed;
-      try {observed=checkPixels(canvas,meta);} finally {canvas.width=1;}
+      try {observed=checkPixels(canvas,meta,task.question);} finally {canvas.width=1;}
       const sourceAnswer=skills.sourceAnswer(meta.family,meta.question,label.source);
       ensure(label.answer===sourceAnswer && label.answer===observed.answer,'Source / pixel answer mismatch: '+id);
       ensure(JSON.stringify(label.pixels)===JSON.stringify(observed.readings),'Pixel evidence mismatch: '+id);

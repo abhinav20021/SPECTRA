@@ -13,6 +13,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Run the generated Studio pilot
+        run: node framework/cli.cjs pipeline --suite suites/studio-demo.json --out artifacts/studio-demo
       - name: Unpack the frozen regression set
         run: |
           mkdir -p artifacts/frozen
@@ -33,6 +35,7 @@ jobs:
         with:
           name: visual-evaluation
           path: |
+            artifacts/studio-demo/run
             artifacts/candidate
             artifacts/comparison.json
             artifacts/panel-candidate

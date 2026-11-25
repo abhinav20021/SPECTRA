@@ -17,7 +17,8 @@ function inspectionRisk(rows) {
 }
 const PROTOCOL='vtf-exact-label-pairs/1';
 
-function normalize(raw,family) {
+function normalize(raw,family,key) {
+  if(skills.labFamilies[family])return skills.labNormalize(raw,key);
   const token=raw.trim().replace(/^[\s"'*`]+|[\s"'*`.!]+$/g,'').toLowerCase();
   if(family==='panel_pins')return /^[0-6]$/.test(token)?token:null;
   if(family==='counting')return /^\d{1,3}$/.test(token)?String(Number(token)):null;
@@ -44,7 +45,7 @@ function slices(rows,field) {
 }
 function reportFor(manifest,adapter,responses,tasks,labels,gates){
   const results=responses.map((r,i)=>{
-    const label=labels[i],task=tasks[i],answer=r.status==='response'?normalize(r.raw,label.family):null;
+    const label=labels[i],task=tasks[i],answer=r.status==='response'?normalize(r.raw,label.family,label.question):null;
     return {...r,group:label.group,index:label.index,family:label.family,questionType:label.question,
       difficulty:label.difficulty,variant:label.variant,prompt:task.question,image:task.image,
       expected:label.answer,answer,correct:r.status==='response'&&answer===label.answer};

@@ -20,6 +20,18 @@
 .tourreview{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#f4f1fc;border-bottom:1px solid #e3def1;padding:8px 20px;font-size:.85rem;font-weight:600;color:#584776}.tourreview .linkbtn{padding:3px 0}.comparison small{display:block;padding:4px 8px;font-size:.76rem;font-weight:600}.comparison small.match{background:#e2f3e9;color:#2e684c}.comparison small.miss{background:#fbe9df;color:#844b2a}
 
 #pixelOverlay{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:8px}.answerlist{margin-top:10px}
+
+/* Studio task catalog and live run status */
+.skillpicker{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.skillcard{min-height:62px;padding:7px 9px;gap:9px}.skillcard .skillart{width:47px;height:auto;flex-shrink:0}
+.skillcard strong{font-size:.95rem}.skillcard small{font-size:.8rem}
+.livelog{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:12px;background:#faf9ff;margin:0 0 16px;overflow:hidden}
+.livelog>div{padding:10px 14px;border-right:1px solid var(--line)}.livelog>div:last-child{border:0}.livelog span{display:block;font-size:.8rem;color:var(--muted)}.livelog strong{font-size:.92rem;font-weight:600}
+.heroactions{flex-wrap:wrap;justify-content:flex-end}.heroactions .btn{white-space:nowrap}.labmethod{padding:10px 0;color:var(--muted)}
+@media(max-width:970px){.skillpicker{grid-template-columns:repeat(3,minmax(0,1fr))}.heroactions{justify-content:flex-start}}
+@media(max-width:700px){.skillpicker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}.skillcard .skillart{display:none}.skillcard{min-width:0}.skillcard strong{font-size:.9rem}.livelog{grid-template-columns:repeat(2,minmax(0,1fr))}.livelog>div{padding:6px 10px}.heroactions{gap:6px}.heroactions .btn{padding:7px 10px}}
+
+.taskrow{display:flex;align-items:baseline;justify-content:space-between;gap:8px}.taskrow .linkbtn{font-size:.85rem;padding:0}.taskgroup{margin-top:12px}.taskgroup div{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 13px}.taskpick{font:inherit;font-size:.87rem;border:1px solid #d8d4e5;background:#faf9fd;color:#44396d;border-radius:6px;padding:6px 9px}.taskpick:hover{background:#eeeafa}
 </style>
 
 </head><body>
@@ -28,23 +40,28 @@
 <button class="methodbtn" id="method"><span data-icon="book"></span><span>How it works</span></button></div></header>
 <main>
 <section id="studio">
-<div class="titlebar"><div><h1>Evaluation studio<span class="period">.</span></h1><p>Compare how a vision model reads charts, counts objects, and reasons about space.</p></div><div class="heroactions"><button class="btn white" id="generate"><span data-icon="shuffle"></span>New challenge</button><button class="btn primary tour" id="tour"><span data-icon="play"></span><span id="tourLabel">Run three-skill demo</span></button></div></div>
+<div class="titlebar"><div><h1>Evaluation studio<span class="period">.</span></h1><p>Generate an image and a visual question from a seed. Test the exact PNG and inspect the evidence behind its answer.</p></div><div class="heroactions"><button class="btn white" id="generate"><span data-icon="shuffle"></span>Generate sample</button><button class="btn primary tour" id="freshRun"><span data-icon="play"></span>Generate &amp; test live</button><button class="btn white tour" id="tour"><span data-icon="play"></span><span id="tourLabel">Run all skills</span></button></div></div>
 <div class="skillpicker" aria-label="Choose a visual skill" role="group">
 <button class="skillcard is-active" data-family="charts" aria-pressed="true"><canvas class="skillart" width="124" height="80" aria-hidden="true"></canvas><span><strong>Chart reading</strong><small>Compare bar heights</small></span></button>
-<button class="skillcard" data-family="counting" aria-pressed="false"><canvas class="skillart" width="124" height="80" aria-hidden="true"></canvas><span><strong>Object counting</strong><small>Filter by shape and color</small></span></button>
+<button class="skillcard" data-family="counting" aria-pressed="false"><canvas class="skillart" width="124" height="80" aria-hidden="true"></canvas><span><strong>Numeric answering</strong><small>Filter by shape and color</small></span></button>
 <button class="skillcard" data-family="spatial" aria-pressed="false"><canvas class="skillart" width="124" height="80" aria-hidden="true"></canvas><span><strong>Spatial reasoning</strong><small>Identify a star’s neighbors</small></span></button>
+<button class="skillcard" data-family="geometry" aria-pressed="false"><canvas class="skillart" width="124" height="80" aria-hidden="true"></canvas><span><strong>Geometric reasoning</strong><small>Measurements and proportions</small></span></button>
+<button class="skillcard" data-family="quantities" aria-pressed="false"><canvas class="skillart" width="124" height="80" aria-hidden="true"></canvas><span><strong>Counting & measurement</strong><small>Grid paths and inventory changes</small></span></button>
+<button class="skillcard" data-family="patterns" aria-pressed="false"><canvas class="skillart" width="124" height="80" aria-hidden="true"></canvas><span><strong>Symmetry & patterns</strong><small>Reflections and periodicity</small></span></button>
+<button class="skillcard" data-family="sequences" aria-pressed="false"><canvas class="skillart" width="124" height="80" aria-hidden="true"></canvas><span><strong>Sequences & transforms</strong><small>Infer the next panel</small></span></button>
 </div>
+<div class="livelog" aria-label="Live pipeline status"><div><span>Scene</span><strong id="pipeScene">Waiting</strong></div><div><span>Question</span><strong id="pipeQuestion">Waiting</strong></div><div><span>Verification</span><strong id="pipeVerify">Waiting</strong></div><div><span>Evaluation</span><strong id="pipeScore">Ready</strong></div></div>
 <div class="workspace">
 <section class="panel preview">
 <div class="panelhead"><div class="headgroup"><span class="iconbox"><span data-icon="scan"></span></span><h2>Challenge preview</h2></div><button id="seedEdit" class="seed" title="Replay a seed"><span data-icon="hash"></span><span id="seedText">082041</span><span data-icon="edit"></span></button></div>
 <div class="varianttabs" role="group" aria-label="Image variant"><button class="variant selected" data-v="0" aria-pressed="true"><span class="vnum">A</span>Original</button><button class="variant" data-v="1" aria-pressed="false"><span class="vnum">B</span>Restyled</button><button class="variant" data-v="2" aria-pressed="false"><span class="vnum">C</span>Value swap</button></div>
 <div class="stage"><div class="stagebar"><span><i class="livedot"></i>STIMULUS VIEWER</span><span>820 × 356 PX</span></div><div class="paper"><canvas id="chart" width="820" height="356" role="img" aria-label="Regional sales bar chart"></canvas></div><div id="comparison" class="comparison" hidden><div><span>Original</span><canvas width="820" height="356" role="img" aria-label="Original image for comparison"></canvas><small id="compareOriginalScore" hidden></small></div><div><span id="compareTitle">Changed</span><canvas width="820" height="356" role="img" aria-label="Variant image for comparison"></canvas><small id="compareEditScore" hidden></small></div></div><div class="stagefoot"><span id="variantNote">Original chart</span><button class="comparebtn" id="compare" aria-pressed="false">Compare images</button><button class="tinybtn" id="downloadImg" title="Download image PNG" aria-label="Download image PNG"><span data-icon="download"></span></button></div></div>
-<div class="tourreview" id="tourReview" hidden><span id="tourPosition"></span><button class="linkbtn" id="nextSkill">Next skill</button></div><div class="prompt"><span class="prompticon" data-icon="message"></span><div><div class="overline">Visual question</div><p id="questionText"></p></div></div>
+<div class="tourreview" id="tourReview" hidden><span id="tourPosition"></span><button class="linkbtn" id="nextSkill">Next skill</button></div><div class="prompt"><span class="prompticon" data-icon="message"></span><div><div class="overline">Generated question</div><p id="questionText"></p></div></div>
 </section>
 <aside class="panel setup"><div class="panelhead"><div class="headgroup"><span class="iconbox"><span data-icon="sliders"></span></span><h2>Run setup</h2></div></div>
-<div class="fields"><label for="model">Evaluator</label><div class="field"><span data-icon="chip"></span><select id="model"><option value="local">Local vision baseline</option><option value="openai">OpenAI vision model</option></select></div>
-<div id="remoteControls" hidden><label for="modelName">Model ID</label><input id="modelName" type="text" value="gpt-4.1-mini" maxlength="100" autocomplete="off"><label for="apiKey">OpenAI API key</label><input id="apiKey" type="password" autocomplete="off" placeholder="Enter a session key"><p class="fieldnote">Sends each PNG and question directly to OpenAI. Your key stays in this tab’s memory.</p></div>
-<label for="question">Question type</label><div class="field"><span data-icon="chart"></span><select id="question"><option value="highest">Highest value</option><option value="lowest">Lowest value</option></select></div>
+<div class="fields"><label for="model">Evaluator</label><div class="field"><span data-icon="chip"></span><select id="model"><option value="local">Local image baseline</option><option value="openai">Live vision model (API)</option></select></div>
+<div id="remoteControls" hidden><label for="apiBase">API base URL</label><input id="apiBase" type="url" value="https://api.openai.com/v1" autocomplete="off"><label for="modelName">Model ID</label><input id="modelName" type="text" value="gpt-4.1-mini" maxlength="100" autocomplete="off"><label for="apiKey">API key</label><input id="apiKey" type="password" autocomplete="off" placeholder="Enter a session key"><p class="fieldnote">Sends the PNG and question to the selected endpoint. A local inference server can run without a key. Keys stay in this tab.</p></div>
+<div class="taskrow"><label for="question">Task type</label><button class="linkbtn" id="library">Browse all tasks</button></div><div class="field"><span data-icon="chart"></span><select id="question"><option value="highest">Highest value</option><option value="lowest">Lowest value</option></select></div>
 <div class="twocol"><div><label for="difficulty">Difficulty</label><div class="field compact"><select id="difficulty"><option value="standard">Standard</option><option value="close">Close call</option></select></div></div><div><label for="size">Run size</label><div class="field compact"><select id="size"><option value="1">1 challenge</option><option value="5">5 challenges</option><option value="20">20 challenges</option></select></div></div></div>
 <div class="runsummary"><span data-icon="layers"></span><span id="runSummary">3 images per run</span></div>
 <button id="run" class="btn primary"><span data-icon="play"></span><span id="runLabel">Run evaluation</span></button>
@@ -479,6 +496,425 @@
 })();
 </script>
 <script>(() => {
+  'use strict';
+  const E=window.VTF, catalog={}, letters=['A','B','C','D'];
+  const palettes=[['#ffffff','#387aca','#d57538','#299a85','#9160be','#dbaa36'],['#f5f6fb','#588dd8','#e58b4e','#3aa991','#a078cc','#d5a334']];
+  const names=['','blue','orange','teal','violet','gold'];
+  const range=n=>Array.from({length:n},(_,i)=>i);
+  const int=(r,a,b)=>a+Math.floor(r()*(b-a+1));
+  const pick=(r,a)=>a[int(r,0,a.length-1)];
+  const shuffle=(r,a)=>E.shuffled(a,r);
+  const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+  const mapped=new Map();
+  for(const p of palettes)p.forEach((v,i)=>mapped.set(parseInt(v.slice(1),16),i));
+  function painter(style,title,serial) {
+    const c=E.surface(E.W,E.H),g=c.getContext('2d',{willReadFrequently:true}),p=palettes[style];
+    const color=v=>typeof v==='number'?p[v]:v;
+    const rect=(x,y,w,h,v)=>{g.fillStyle=color(v);g.fillRect(x,y,w,h);};
+    const line=(x,y,X,Y,v,w=2)=>{g.beginPath();g.strokeStyle=color(v);g.lineWidth=w;g.moveTo(x,y);g.lineTo(X,Y);g.stroke();};
+    const dot=(x,y,r,v)=>{g.fillStyle=color(v);g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.fill();};
+    const text=(v,x,y,size=15,align='left')=>{g.fillStyle='#394052';g.font='600 '+size+'px '+(window.VTF_RENDER_FONT||'Arial, sans-serif');g.textAlign=align;g.fillText(String(v),x,y);g.textAlign='left';};
+    const frame=(x,y,w,h,col='#c5ccda',weight=2)=>{g.strokeStyle=color(col);g.lineWidth=weight;g.strokeRect(x,y,w,h);};
+    const poly=(pts,v)=>{g.fillStyle=color(v);g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill();};
+    rect(0,0,820,356,0);text(title,27,32,21);text('FRAME '+serial,791,31,14,'right');line(26,49,794,49,'#d7dbe4',1);
+    return {c,g,p,rect,line,dot,text,frame,poly};
+  }
+  function pixels(canvas) {
+    const w=canvas.width,h=canvas.height,data=canvas.getContext('2d',{willReadFrequently:true}).getImageData(0,0,w,h).data;
+    const at=(x,y)=>{const p=4*(Math.round(y)*w+Math.round(x));return mapped.get((data[p]<<16)|(data[p+1]<<8)|data[p+2])??0;};
+    function blobs(box,ink) {
+      const [ox,oy,W,H]=box, mask=new Uint8Array(W*H),q=new Int32Array(W*H),out=[];
+      for(let y=0;y<H;y++)for(let x=0;x<W;x++)mask[y*W+x]=+(at(ox+x,oy+y)===ink);
+      for(let i=0;i<mask.length;i++)if(mask[i]){
+        let head=0,tail=1,sx=0,sy=0,l=W,r=0,t=H,b=0;q[0]=i;mask[i]=0;
+        while(head<tail){
+          const k=q[head++],x=k%W,y=Math.floor(k/W);sx+=x;sy+=y;l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y);
+          for(const n of [x?k-1:-1,x+1<W?k+1:-1,y?k-W:-1,y+1<H?k+W:-1])if(n>=0&&mask[n]){q[tail++]=n;mask[n]=0;}
+        }
+        if(tail>=5)out.push({x:ox+sx/tail,y:oy+sy/tail,area:tail,bounds:[ox+l,oy+t,r-l+1,b-t+1]});
+      }
+      return out;
+    }
+    return {at,blobs};
+  }
+  const result=(answer,detail)=>({answer:String(answer),readings:[{detail:String(detail)}]});
+  const define=(id,def)=>{catalog[id]={id,...def};};
+  const matrix=(n,fn)=>range(n).map(y=>range(n).map(x=>fn(x,y)));
+  function tileDraw(g,m,x,y,s){
+    const h=m.length,w=m[0].length;
+    g.rect(x,y,w*s,h*s,'#e5e9f0');
+    m.forEach((row,j)=>row.forEach((v,i)=>g.rect(x+i*s+1,y+j*s+1,s-2,s-2,v||0)));
+  }
+  const tileRead=(v,x,y,s,n,cols=n)=>range(n).map(j=>range(cols).map(i=>v.at(x+(i+.5)*s,y+(j+.5)*s)));
+  function transform(m,op){
+    const n=m.length;
+    switch(op){
+      case 'Clockwise':return matrix(n,(x,y)=>m[n-1-x][y]);
+      case 'Counterclockwise':return matrix(n,(x,y)=>m[x][n-1-y]);
+      case 'Half turn':return matrix(n,(x,y)=>m[n-1-y][n-1-x]);
+      case 'Vertical mirror':return m.map(row=>[...row].reverse());
+      case 'Horizontal mirror':return [...m].reverse().map(row=>[...row]);
+      default:return m.map(row=>[...row]);
+    }
+  }
+  const ops=['Clockwise','Counterclockwise','Half turn','Vertical mirror','Horizontal mirror'];
+  function motif(r,n=3) {
+    for(let i=0;i<60;i++){
+      const m=matrix(n,()=>pick(r,[0,0,0,1,2,3]));
+      const forms=['Identity',...ops].map(o=>JSON.stringify(transform(m,o)));
+      if(new Set(forms).size===forms.length)return m;
+    }
+    return [[1,2,0],[0,3,0],[0,0,0]];
+  }
+  function uniqueIndex(arr,pred){
+    const found=arr.map((v,i)=>pred(v,i)?i:-1).filter(i=>i>=0);
+    if(found.length!==1)throw Error('Ambiguous visible option.');
+    return letters[found[0]];
+  }
+  const boardBox=[22,57,776,285];
+  window.ReasoningLab={E,catalog,define,palettes,names,letters,range,int,pick,shuffle,same,painter,pixels,result,matrix,tileDraw,tileRead,transform,ops,motif,uniqueIndex,boardBox};
+})();
+</script>
+<script>(() => {
+  'use strict';
+  const {define,range,int,pick,shuffle,names,letters,boardBox,result,same}=window.ReasoningLab;
+  const family='geometry', six=['A B C','A C B','B A C','B C A','C A B','C B A'];
+  const sortLabels=(values,labels,desc)=>values.map((v,i)=>[v,labels[i]]).sort((a,b)=>(a[0]-b[0])*(desc?-1:1)).map(p=>p[1]).join(' ');
+  const ext=marks=>{if(!marks.length)throw Error('Reference outline missing.');const bs=marks.map(m=>m.bounds);return [Math.min(...bs.map(b=>b[0])),Math.min(...bs.map(b=>b[1])),Math.max(...bs.map(b=>b[0]+b[2]-1)),Math.max(...bs.map(b=>b[1]+b[3]-1))];};
+  const rel=(p,b,k)=>k==='inside'?p.x>b[0]&&p.x<b[2]&&p.y>b[1]&&p.y<b[3]:k==='outside'?!rel(p,b,'inside'):k==='above'?p.y<b[1]:p.y>b[3];
+  const posQueries=[1,2].flatMap(ink=>['inside','outside','above','below'].map(side=>({ink,side,text:'How many '+(ink===1?'blue circles':'orange squares')+' are '+side+' the teal reference frame?'})));
+  define('positional',{family,name:'Positional count',title:'Survey markers',queries:posQueries,
+    make(r,q,h){const pts=shuffle(r,range(32)).slice(0,h?24:16).map(k=>({x:74+(k%8)*96+int(r,-3,3),y:80+Math.floor(k/8)*73+int(r,-3,3),ink:int(r,1,2)}));return {b:[242,113,571,256],pts};},
+    draw(g,s){g.frame(s.b[0],s.b[1],s.b[2]-s.b[0],s.b[3]-s.b[1],3,3);for(const p of s.pts)p.ink===1?g.dot(p.x,p.y,8,1):g.rect(p.x-7,p.y-7,14,14,2);},
+    solve:(s,q)=>String(s.pts.filter(p=>p.ink===q.ink&&rel(p,s.b,q.side)).length),
+    read(v,q){const b=ext(v.blobs(boardBox,3)),m=v.blobs(boardBox,q.ink);const n=m.filter(p=>rel(p,b,q.side)).length;return result(n,m.length+' target marks located; '+n+' satisfy the selected relation.');}});
+  const order=(field,unit)=>[false,true].map(desc=>({field,desc,text:'Order A, B and C by '+field+', '+(desc?'largest to smallest':'smallest to largest')+'. Give three letters separated by spaces.'}));
+  function shapeMeasure(f,field){
+    if(field==='angle measure')return f.angle;
+    if(field==='line length')return f.length;
+    if(field==='area')return f.kind==='ellipse'?Math.PI*f.w*f.h/4:f.kind==='triangle'?f.w*f.h/2:f.w*f.h;
+    if(f.kind==='triangle')return f.w+2*Math.hypot(f.w/2,f.h);
+    if(f.kind==='ellipse'){const a=f.w/2,b=f.h/2;return Math.PI*(3*(a+b)-Math.sqrt((3*a+b)*(a+3*b)));}
+    return 2*(f.w+f.h);
+  }
+  define('sorting',{family,name:'Shape sorting',title:'Geometry samples',choices:six,queries:[...order('area'),...order('perimeter'),...order('angle measure'),...order('line length')],
+    make(r,q,h){for(let i=0;i<120;i++){const levels=shuffle(r,h?[0,1,2]:[0,2,4]),kinds=shuffle(r,['rectangle','ellipse','triangle']);
+      const figs=levels.map((n,j)=>({kind:kinds[j],w:40+n*14+int(r,0,10),h:36+n*10+int(r,0,11),angle:20+n*14+int(r,0,4),length:49+n*12+int(r,0,3)}));
+      const sorted=figs.map(f=>shapeMeasure(f,q.field)).sort((a,b)=>a-b),gap=q.field==='area'?180:q.field==='perimeter'?10:3;
+      if(sorted[1]-sorted[0]>gap&&sorted[2]-sorted[1]>gap)return {figs};}throw Error('Could not separate shape measures.');},
+    draw(g,s,q){s.figs.forEach((f,i)=>{const x=135+i*270,y=209;if(q.field==='angle measure'){const px=x-44,py=y+28,a=f.angle*Math.PI/180;g.line(px,py,px+93,py,1,4);g.line(px,py,px+93*Math.cos(a),py-93*Math.sin(a),1,4);g.dot(px,py,5,3);g.dot(px+93*Math.cos(a),py-93*Math.sin(a),5,2);}else if(q.field==='line length'){const a=f.angle*Math.PI/180,dx=f.length*Math.cos(a)/2,dy=f.length*Math.sin(a)/2;g.line(x-dx,y+dy,x+dx,y-dy,1,4);g.dot(x-dx,y+dy,5,3);g.dot(x+dx,y-dy,5,2);}
+      else if(f.kind==='ellipse'){g.g.fillStyle=g.p[1];g.g.beginPath();g.g.ellipse(x,y,f.w/2,f.h/2,0,0,2*Math.PI);g.g.fill();}
+      else if(f.kind==='triangle')g.poly([[x,y-f.h/2],[x+f.w/2,y+f.h/2],[x-f.w/2,y+f.h/2]],1);
+      else g.rect(x-Math.floor(f.w/2),y-Math.floor(f.h/2),f.w,f.h,1);g.text(letters[i],x,300,21,'center');});},
+    solve:(s,q)=>sortLabels(s.figs.map(f=>shapeMeasure(f,q.field)),letters,q.desc),
+    read(v,q){const values=range(3).map(i=>{const roi=[20+i*270,70,230,197];
+      if(q.field==='angle measure'||q.field==='line length'){const a=v.blobs(roi,3)[0],b=v.blobs(roi,2)[0];return q.field==='line length'?Math.round(Math.hypot(b.x-a.x,b.y-a.y)):Math.round(Math.atan2(a.y-b.y,b.x-a.x)*180/Math.PI);}
+      const m=v.blobs(roi,1)[0];const w=m.bounds[2],h=m.bounds[3],fill=m.area/(w*h);return q.field==='area'?m.area:Math.round(shapeMeasure({w,h,kind:fill>.90?'rectangle':fill>.65?'ellipse':'triangle'},'perimeter'));});return result(sortLabels(values,letters,q.desc),'A / B / C measured '+q.field+': '+values.join(' / ')+'.');}});
+  const stackQueries=[1,2,3].map(ink=>({ink,text:'How many violet markers lie strictly inside the '+names[ink]+' sheet, including its covered portion? The three sheets are equal rectangles.'}));
+  function contained(p,b,rad){return p.x-rad>b[0]&&p.x+rad<b[2]&&p.y-rad>b[1]&&p.y+rad<b[3];}
+  define('stack',{family,name:'Stack count',title:'Overlay registration sheets',queries:stackQueries,
+    make(r,q,h){const x=int(r,135,165),y=int(r,76,85);const boxes=range(3).map(i=>[x+i*76,y+i*44,x+i*76+315,y+i*44+150]);const pts=[];
+      for(const k of shuffle(r,range(15*8))){const p={x:78+(k%15)*47,y:73+Math.floor(k/15)*36};if(boxes.some(b=>Math.min(Math.abs(p.x-b[0]),Math.abs(p.x-b[2]),Math.abs(p.y-b[1]),Math.abs(p.y-b[3]))<9))continue;pts.push(p);if(pts.length===(h?28:18))break;}return {boxes,pts};},
+    draw(g,s){s.boxes.forEach(([x,y,X,Y],i)=>{g.rect(x,y,X-x,Y-y,['#e3edf8','#f8e9dd','#e0f1ea'][i]);g.frame(x,y,X-x,Y-y,i+1,3);});s.pts.forEach(p=>g.dot(p.x,p.y,5,4));},
+    solve:(s,q)=>String(s.pts.filter(p=>contained(p,s.boxes[q.ink-1],5)).length),
+    read(v,q){const b=ext(v.blobs(boardBox,q.ink)),m=v.blobs(boardBox,4);const n=m.filter(p=>{const [x,y,w,h]=p.bounds;return x>b[0]&&x+w-1<b[2]&&y>b[1]&&y+h-1<b[3];}).length;return result(n,'Visible sheet extrema '+b.join(', ')+' enclose '+n+' complete marker outlines.');}});
+  const colorLabels=['Blue','Orange','Teal'];
+  const colorOrders=six.map(s=>s.split(' ').map(l=>colorLabels[letters.indexOf(l)]).join(' '));
+  function shares(r,h){return shuffle(r,h?[4,5,6]:[2,4,7]);}
+  function pie(g,values,x,y,r){
+    let a=-Math.PI/2;const total=values.reduce((s,n)=>s+n,0);
+    values.forEach((v,i)=>{const b=a+2*Math.PI*v/total;g.g.fillStyle=g.p[i+1];g.g.beginPath();g.g.moveTo(x,y);g.g.arc(x,y,r,a,b);g.g.closePath();g.g.fill();a=b;});
+  }
+  function angular(v,x,y,r){const n=[0,0,0];for(let i=0;i<720;i++){const a=i*Math.PI/360,k=v.at(x+r*Math.cos(a),y+r*Math.sin(a));if(k>=1&&k<=3)n[k-1]++;}return n;}
+  define('pie',{family,name:'Pie chart ordering',title:'Budget allocation',choices:colorOrders,queries:[false,true].map(desc=>({desc,text:'Order the blue, orange and teal budget slices from '+(desc?'largest to smallest':'smallest to largest')+'. Give the three color names in order.'})),
+    make:(r,q,h)=>({values:shares(r,h),angle:int(r,0,5)}),
+    draw(g,s){g.g.save();g.g.translate(355,201);g.g.rotate(s.angle*Math.PI/6);pie(g,s.values,0,0,123);g.g.restore();colorLabels.forEach((v,i)=>{g.rect(560,139+43*i,19,19,i+1);g.text(v,593,156+i*43,18);});},
+    solve:(s,q)=>sortLabels(s.values,colorLabels,q.desc),
+    read(v,q){const m=angular(v,355,201,91);return result(sortLabels(m,colorLabels,q.desc),'Angular samples by color: '+m.join(', ')+'.');}});
+  define('chartmatch',{family,name:'Chart comparison',title:'Allocation cross-check',choices:letters.slice(0,3),queries:[{text:'Which bar chart, A, B or C, has the same color proportions as the pie?'},{text:'Which candidate reproduces the pie allocation when its bar heights are normalized? Answer A, B or C.'}],
+    make(r,q,h){const a=shares(r,h),bars=shuffle(r,[a,[a[1],a[2],a[0]],[a[2],a[0],a[1]]]);return {a,bars,scale:int(r,17,20)};},
+    draw(g,s){pie(g,s.a,147,193,98);g.text('Reference',147,318,16,'center');s.bars.forEach((a,i)=>{const x=303+i*166;g.line(x,266,x+119,266,'#a9b2c2');a.forEach((v,j)=>g.rect(x+8+j*36,266-v*s.scale,26,v*s.scale,j+1));g.text(letters[i],x+60,303,20,'center');});},
+    solve:s=>letters[s.bars.findIndex(b=>same(b,s.a))],
+    read(v){const a=angular(v,147,193,74);const normalize=ns=>ns.map(n=>n/ns.reduce((sum,x)=>sum+x,0));const ref=normalize(a);
+      const distances=range(3).map(i=>{const vals=range(3).map(j=>v.blobs([301+i*166,61,121,205],j+1)[0].bounds[3]);return normalize(vals).reduce((s,n,j)=>s+Math.abs(n-ref[j]),0);});
+      const k=distances.indexOf(Math.min(...distances));return result(letters[k],'Normalized height errors for A / B / C: '+distances.map(n=>n.toFixed(3)).join(' / ')+'.');}});
+})();
+</script>
+<script>(() => {
+  'use strict';
+  const {define,range,int,pick,shuffle,names,boardBox,result,tileDraw,tileRead,matrix}=window.ReasoningLab;
+  const family='quantities';
+  const membership=(p,c)=>Math.hypot(p.x-c,p.y-199)<112;
+  const region=(a,b,q)=>q==='both'?a&&b:q==='left'?a&&!b:b&&!a;
+  const vennQueries=['left','right','both'].map(k=>({k,text:'Sum the values of the counters '+({left:'in the left circle only',right:'in the right circle only',both:'in the overlap of the two circles'}[k])+'. Each blue pip is worth one.'}));
+  define('venn',{family,name:'Venn region sums',title:'Inventory overlap',queries:vennQueries,
+    make(r,q,h){const coins=[];for(const k of shuffle(r,range(70))){const x=215+k%10*43,y=87+Math.floor(k/10)*37;
+      const dist=[332,477].map(c=>Math.hypot(x-c,y-199));
+      if(Math.min(...dist.map(n=>Math.abs(n-112)))<19||Math.min(...dist)>93)continue;
+      coins.push({x,y,value:int(r,1,h?4:3)});if(coins.length===(h?18:12))break;
+    }return {coins};},
+    draw(g,s){for(const [i,x] of [332,477].entries()){g.g.strokeStyle=g.p[i+2];g.g.lineWidth=3;g.g.beginPath();g.g.arc(x,199,112,0,2*Math.PI);g.g.stroke();}
+      for(const c of s.coins){g.dot(c.x,c.y,15,'#e3e7ef');for(let i=0;i<c.value;i++)g.dot(c.x+(i%2)*9-4,c.y+Math.floor(i/2)*9-4,3,1);}
+      g.text('Left set',263,338,15,'center');g.text('Right set',536,338,15,'center');},
+    solve:(s,q)=>String(s.coins.filter(c=>region(membership(c,332),membership(c,477),q.k)).reduce((a,c)=>a+c.value,0)),
+    read(v,q){const circles=[2,3].map(i=>{const b=v.blobs(boardBox,i).map(o=>o.bounds);const l=Math.min(...b.map(a=>a[0])),r=Math.max(...b.map(a=>a[0]+a[2]-1));return {x:(l+r)/2,r:(r-l)/2};});
+      const dots=v.blobs(boardBox,1),included=dots.filter(p=>{const hit=circles.map(c=>Math.hypot(p.x-c.x,p.y-199)<c.r);return region(hit[0],hit[1],q.k);});return result(included.length,included.length+' unit pips inside the requested region; '+dots.length+' pips across both sets.');}});
+  define('composite',{family,name:'Composite shape counting',title:'Partitioned floor plan',queries:[{square:false,text:'How many axis-aligned rectangles of every size appear in the outlined grid? Include squares.'},{square:true,text:'How many squares of every size can be traced along the blue grid lines?'}],
+    make(r,q,h){return {rows:int(r,2,h?5:4),cols:int(r,3,h?7:5),step:h?38:45};},
+    draw(g,s){const x=410-Math.floor(s.cols*s.step/2),y=195-Math.floor(s.rows*s.step/2);
+      for(let i=0;i<=s.cols;i++)g.line(x+i*s.step,y,x+i*s.step,y+s.rows*s.step,1,3);
+      for(let j=0;j<=s.rows;j++)g.line(x,y+j*s.step,x+s.cols*s.step,y+j*s.step,1,3);},
+    solve(s,q){if(!q.square)return String(s.rows*(s.rows+1)*s.cols*(s.cols+1)/4);return String(range(Math.min(s.rows,s.cols)).reduce((a,k)=>a+(s.rows-k)*(s.cols-k),0));},
+    read(v,q){const b=v.blobs(boardBox,1)[0].bounds;
+      const find=(len,pred)=>range(len).filter((i)=>pred(i)&&(i===0||!pred(i-1)));
+      const xs=find(b[2],i=>v.at(b[0]+i,b[1]+8)===1),ys=find(b[3],i=>v.at(b[0]+8,b[1]+i)===1);
+      let count=0;for(let a=0;a<xs.length;a++)for(let b=a+1;b<xs.length;b++)for(let c=0;c<ys.length;c++)for(let d=c+1;d<ys.length;d++)if(!q.square||Math.abs((xs[b]-xs[a])-(ys[d]-ys[c]))<=2)count++;
+      return result(count,xs.length+' vertical lines and '+ys.length+' horizontal lines. Enumerated '+count+' matching outlines.');}});
+  const grid={x:181,y:78,s:34,w:13,h:7};
+  function routes(r,h){const ys=shuffle(r,[1,2,3,4,5,6]).slice(0,int(r,1,h?4:3)).sort((a,b)=>a-b),xs=shuffle(r,range(12).map(i=>i+1)).slice(0,int(r,1,h?4:3)).sort((a,b)=>a-b);
+    const blue=[],orange=[];ys.forEach((v,i)=>{blue.push([i%2?13:0,v],[i%2?0:13,v]);});xs.forEach((v,i)=>{orange.push([v,i%2?7:0],[v,i%2?0:7]);});return {blue,orange};}
+  function mesh(g){for(let x=0;x<=grid.w;x++)g.line(grid.x+x*34,grid.y,grid.x+x*34,grid.y+238,'#d3dae5',1);
+    for(let y=0;y<=grid.h;y++)g.line(grid.x,grid.y+y*34,grid.x+442,grid.y+y*34,'#d3dae5',1);}
+  function drawRoutes(g,s){mesh(g);[s.blue,s.orange].forEach((path,i)=>path.slice(1).forEach(([x,y],j)=>{const [a,b]=path[j];g.line(grid.x+a*34,grid.y+b*34,grid.x+x*34,grid.y+y*34,i+1,5);}));}
+  function vertices(path){const set=new Set();for(let i=1;i<path.length;i++){let [x,y]=path[i-1];const [X,Y]=path[i],dx=Math.sign(X-x),dy=Math.sign(Y-y);set.add(x+','+y);
+    while(x!==X||y!==Y){x+=dx;y+=dy;set.add(x+','+y);}
+  }return set;}
+  define('linelength',{family,name:'Tiled line length',title:'Warehouse aisle routes',queries:['blue','orange'].map(color=>({color,text:'How long is the '+color+' route in unit tile edges? Count each grid step along its path.'})),
+    make:(r,q,h)=>routes(r,h),draw:drawRoutes,
+    solve:(s,q)=>String(vertices(s[q.color]).size-1),
+    read(v,q){const ink=q.color==='blue'?1:2;let n=0;
+      for(let y=0;y<=7;y++)for(let x=0;x<=13;x++){if(x<13&&v.at(grid.x+(x+.5)*34,grid.y+y*34)===ink)n++;if(y<7&&v.at(grid.x+x*34,grid.y+(y+.5)*34)===ink)n++;}
+      return result(n,n+' occupied unit-edge midpoints measured on the '+q.color+' route.');}});
+  define('intersections',{family,name:'Tiled line intersections',title:'Crossing routes',queries:[{text:'How many distinct grid vertices are shared by the blue and orange routes?'},{text:'How many crossing points would a walker encounter between the blue and orange paths? Count each point once.'}],
+    make:(r,q,h)=>routes(r,h),draw:drawRoutes,
+    solve(s){const b=vertices(s.orange);return String([...vertices(s.blue)].filter(k=>b.has(k)).length);},
+    read(v){let n=0;for(let y=0;y<=7;y++)for(let x=0;x<=13;x++){const px=grid.x+x*34,py=grid.y+y*34;
+      const near=[v.at(px-8,py),v.at(px+8,py),v.at(px,py-8),v.at(px,py+8)];if(near.includes(1)&&near.includes(2))n++;}
+      return result(n,n+' vertices have incident strokes in both colors.');}});
+  const bays=['North','South','East','West'];
+  const recount=[0,1,2].flatMap(ink=>bays.map(bay=>({ink,bay,text:'Audit the '+bay+' warehouse bay. '+(ink?'How many bins that were '+names[ink]+' in the before plan changed color?':'How many bin locations changed color between the before and after plans?')})));
+  define('recolor',{family,name:'Tiled board recoloring',title:'Warehouse bin audit',queries:recount,
+    make(r,q,h){const n=h?6:5,a=matrix(n,()=>int(r,1,3)),b=a.map(row=>[...row]);for(const k of shuffle(r,range(n*n)).slice(0,int(r,2,h?12:7))){const y=Math.floor(k/n),x=k%n;b[y][x]=1+(a[y][x]-1+int(r,1,2))%3;}if(q.ink&&!a.slice((q.first||1)-1,q.last||n).some(row=>row.includes(q.ink))){a[(q.first||1)-1][0]=q.ink;b[(q.first||1)-1][0]=q.ink;}return {a,b};},
+    edit(r,s,q){const a=s.a,b=s.b.map(row=>[...row]),n=a.length;
+      const eligible=range(n*n).filter(i=>{const y=Math.floor(i/n);return y+1>=(q.first||1)&&y+1<=(q.last||n)&&(!q.ink||a[y][i%n]===q.ink);});
+      const i=pick(r,eligible),y=Math.floor(i/n),x=i%n;
+      b[y][x]=b[y][x]===a[y][x]?1+a[y][x]%3:a[y][x];return {a,b};},
+    draw(g,s,q){const n=s.a.length;[s.a,s.b].forEach((m,i)=>{g.text(q.bay+' bay  /  '+(i?'After':'Before'),223+i*374,85,17,'center');const pitch=Math.floor(211/n);tileDraw(g,m,119+i*374,107,pitch);for(let y=0;y<n;y++)g.text(y+1,105+i*374,112+(y+.5)*pitch,13,'center');});},
+    solve:(s,q)=>String(s.a.flat().filter((v,i)=>Math.floor(i/s.a.length)+1>=(q.first||1)&&Math.floor(i/s.a.length)+1<=(q.last||s.a.length)&&v!==s.b.flat()[i]&&(!q.ink||q.ink===v)).length),
+    read(v,q){let n=0;for(let x=119;x<332;x++)if(v.at(x,113)&&!v.at(x-1,113))n++;if(n!==5&&n!==6)throw Error('Unreadable warehouse grid.');
+      const s=Math.floor(211/n),a=tileRead(v,119,107,s,n),b=tileRead(v,493,107,s,n);let changed=0,all=0;
+      for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(a[y][x]!==b[y][x]){all++;if(y+1>=(q.first||1)&&y+1<=(q.last||n)&&(!q.ink||a[y][x]===q.ink))changed++;}
+      return result(changed,n+' × '+n+' bins compared at their cell centers. '+all+' color changes, '+changed+' matching the question.');}});
+})();
+</script>
+<script>(() => {
+  'use strict';
+  const {define,range,int,pick,shuffle,same,result,matrix,tileDraw,tileRead,transform,motif,ops,letters,uniqueIndex}=window.ReasoningLab;
+  const family='patterns',classes=['Vertical','Horizontal','Both','Neither'];
+  function mirrorClass(m){const v=same(m,transform(m,'Vertical mirror')),h=same(m,transform(m,'Horizontal mirror'));return v?(h?'Both':'Vertical'):(h?'Horizontal':'Neither');}
+  define('mirror',{family,name:'Mirror identification',title:'Textile repeat sample',choices:classes,queries:[{text:'Which mirror axes preserve the colored tile? Answer Vertical, Horizontal, Both or Neither.'},{text:'Classify the color pattern by left–right and top–bottom reflection. Answer Vertical, Horizontal, Both or Neither.'}],
+    make(r){const desired=pick(r,classes),n=6;
+      for(let i=0;i<80;i++){const src=matrix(n,()=>pick(r,[0,0,1,2,3]));const m=matrix(n,(x,y)=>src[desired==='Both'||desired==='Horizontal'?Math.min(y,n-1-y):y][desired==='Both'||desired==='Vertical'?Math.min(x,n-1-x):x]);
+        if(mirrorClass(m)===desired)return {m};}throw Error('Could not construct requested mirror class.');},
+    draw(g,s){tileDraw(g,s.m,287,70,40);},solve:s=>mirrorClass(s.m),
+    read(v){const m=tileRead(v,287,70,40,6);let lr=0,tb=0;for(let y=0;y<6;y++)for(let x=0;x<6;x++){lr+=m[y][x]!==m[y][5-x];tb+=m[y][x]!==m[5-y][x];}
+      return result(lr?(tb?'Neither':'Horizontal'):(tb?'Vertical':'Both'),lr+' left–right mismatches; '+tb+' top–bottom mismatches.');}});
+  const fillQ=['upper left','upper right','lower left','lower right'].map((name,missing)=>({missing,text:'Which tile A–D completes the '+name+' position? Across each seam, the colored cells must be mirror images.'}));
+  const panel=(i)=>[86+(i%2)*119,74+Math.floor(i/2)*121];
+  const option=(i)=>[452+(i%2)*151,76+Math.floor(i/2)*124];
+  define('fill',{family,name:'Symmetry fill',title:'Mirrored tile assembly',choices:letters,queries:fillQ,
+    make(r,q){const base=motif(r);const square=['Identity','Vertical mirror','Horizontal mirror','Half turn'].map(op=>transform(base,op));
+      const other=shuffle(r,['Identity',...ops].map(op=>transform(base,op)).filter(m=>!same(m,square[q.missing]))).slice(0,3);
+      return {square,choices:shuffle(r,[square[q.missing],...other])};},
+    draw(g,s,q){s.square.forEach((m,i)=>{const [x,y]=panel(i);if(i===q.missing){g.frame(x,y,93,93);g.text('?',x+46,y+61,32,'center');}else tileDraw(g,m,x,y,31);});
+      s.choices.forEach((m,i)=>{const [x,y]=option(i);tileDraw(g,m,x,y,26);g.text(letters[i],x+39,y+100,16,'center');});},
+    solve:(s,q)=>uniqueIndex(s.choices,c=>same(c,s.square[q.missing])),
+    read(v,q){const buddy=q.missing^1;const horizontal=tileRead(v,...panel(buddy),31,3).map(row=>[...row].reverse());
+      const vertical=[...tileRead(v,...panel(q.missing^2),31,3)].reverse();if(!same(horizontal,vertical))throw Error('Mirror seams disagree.');
+      return result(uniqueIndex(range(4).map(i=>tileRead(v,...option(i),26,3)),m=>same(m,horizontal)),'Reflections from both visible neighbors agree on all nine cell colors.');}});
+  const odd=classes=>{const count=classes.filter(Boolean).length;if(count!==1&&count!==3)throw Error('No unique symmetry outlier.');return letters[classes.indexOf(count===1)];};
+  function arrange(r){const isHalf=!!int(r,0,1),out=int(r,0,3);return {modes:range(4).map(i=>i===out?!isHalf:isHalf),
+    stamps:range(4).map(()=>{const pts=shuffle(r,[1,2,3]);const m=matrix(5,()=>0);m[1][1]=pts[0];m[1][2]=pts[1];m[3][1]=pts[2];return transform(m,pick(r,['Identity',...ops]));}),phase:range(4).map(()=>int(r,0,1))};}
+  function dimensions(wall,i){return wall?{x:84+399*(i%2),y:76+141*Math.floor(i/2),nx:8,ny:3,step:7}:{x:108,y:75+68*i,nx:12,ny:1,step:10};}
+  function paintRepeat(g,s,wall){for(let i=0;i<4;i++){const {x,y,nx,ny,step}=dimensions(wall,i),width=5*nx*step,height=5*ny*step;
+      g.frame(x-3,y-3,width+6,height+6,'#d7dbe4',1);g.text(letters[i],x-26,y+height/2+6,18,'center');
+      for(let ty=0;ty<ny;ty++)for(let tx=0;tx<nx;tx++){const flip=s.modes[i]&&(tx+ty+s.phase[i])%2;const m=flip?transform(s.stamps[i],'Half turn'):s.stamps[i];
+        m.forEach((row,j)=>row.forEach((ink,k)=>{if(ink)g.rect(x+(tx*5+k)*step+1,y+(ty*5+j)*step+1,step-2,step-2,ink);}));}
+    }}
+  function readRepeat(v,wall){const matches=range(4).map(i=>{const {x,y,nx,ny,step}=dimensions(wall,i),m=tileRead(v,x,y,step,ny*5,nx*5);
+      return m.every((row,j)=>row.every((ink,k)=>ink===m[m.length-1-j][row.length-1-k]));});return result(odd(matches),'Half-turn invariance of the four aligned repeats: '+matches.map(x=>x?'present':'absent').join(', ')+'.');}
+  for(const [id,wall] of [['frieze',false],['wallpaper',true]]){
+    const label=wall?'patch':'strip';
+    define(id,{family,name:wall?'Wallpaper group oddity':'Frieze group oddity',title:wall?'Wallpaper production samples':'Frieze production samples',choices:letters,
+      queries:[{text:'Which '+label+' A–D has a different symmetry group? Compare translation-only repeats with repeats that also have half-turn symmetry.'},{text:'Inspect the four periodic '+label+'s. Which has the odd symmetry class when tested for 180-degree rotation? Answer A, B, C or D.'}],
+      make:arrange,draw:(g,s)=>paintRepeat(g,s,wall),solve:s=>odd(s.modes),read:v=>readRepeat(v,wall)});
+  }
+})();
+</script>
+<script>(() => {
+  'use strict';
+  const {define,range,int,pick,shuffle,same,result,tileDraw,tileRead,transform,motif,ops,letters,uniqueIndex}=window.ReasoningLab;
+  const family='sequences';
+  const tileSlot=i=>[82+178*i,72],choiceSlot=i=>[82+178*i,218];
+  function options(g,ms){ms.forEach((m,i)=>{const [x,y]=choiceSlot(i);tileDraw(g,m,x,y,28);g.text(letters[i],x+42,y+111,17,'center');});}
+  const readChoices=v=>range(4).map(i=>tileRead(v,...choiceSlot(i),28,3));
+  const opPhrases={'Clockwise':'a 90-degree clockwise rotation','Counterclockwise':'a 90-degree counterclockwise rotation','Half turn':'a 180-degree rotation','Vertical mirror':'a reflection across a vertical axis','Horizontal mirror':'a reflection across a horizontal axis'};
+  const optionSet=(r,base,target)=>shuffle(r,[target,...shuffle(r,['Identity',...ops].map(op=>transform(base,op)).filter(m=>!same(m,target))).slice(0,3)]);
+  define('transformresult',{family,name:'Transform result identification',title:'Orientation check',choices:letters,queries:ops.map(op=>({op,text:'Which candidate A–D is the result of '+opPhrases[op]+' applied to the source tile?'})),
+    make(r,q){const m=motif(r);return {m,options:optionSet(r,m,transform(m,q.op))};},
+    draw(g,s){tileDraw(g,s.m,369,68,30);g.text('Source',414,185,15,'center');options(g,s.options);},
+    solve:(s,q)=>uniqueIndex(s.options,m=>same(m,transform(s.m,q.op))),
+    read(v,q){const ref=tileRead(v,369,68,30,3);return result(uniqueIndex(readChoices(v),m=>same(m,transform(ref,q.op))),'Compared all nine sampled cells after '+opPhrases[q.op]+'.');}});
+  define('transforminfer',{family,name:'Transform pair inference',title:'Tile orientation transfer',choices:ops,
+    queries:[false,true].map(reverse=>({reverse,text:'Which operation maps the '+(reverse?'right tile to the left':'left tile to the right')+'? Answer Clockwise, Counterclockwise, Half turn, Vertical mirror or Horizontal mirror. Clockwise turns are 90 degrees.'})),
+    make(r){const m=motif(r);return {a:m,b:transform(m,pick(r,ops))};},
+    draw(g,s){tileDraw(g,s.a,141,100,57);tileDraw(g,s.b,501,100,57);g.text('Left tile',227,308,17,'center');g.text('Right tile',587,308,17,'center');},
+    solve:(s,q)=>ops.find(op=>same(transform(q.reverse?s.b:s.a,op),q.reverse?s.a:s.b)),
+    read(v,q){const a=tileRead(v,141,100,57,3),b=tileRead(v,501,100,57,3);const hits=ops.filter(op=>same(transform(q.reverse?b:a,op),q.reverse?a:b));
+      if(hits.length!==1)throw Error('Transformation is ambiguous.');return result(hits[0],'Exactly one of five transformations reproduces all colored target cells.');}});
+  const simX=[81,249,405,561,717];
+  const dist=(p,q)=>(p[0]-q[0])**2+(p[1]-q[1])**2;
+  function ratios(p){const d=[dist(p[0],p[1]),dist(p[1],p[2]),dist(p[0],p[2])];return d.map(n=>n/d[0]);}
+  function equivalent(a,b){const ra=ratios(a),rb=ratios(b);return ra.every((n,i)=>Math.abs(n-rb[i])<.025);}
+  define('similarity',{family,name:'Transform similarity',title:'Landmark shape matching',choices:letters,
+    queries:[true,false].map(want=>({want,text:'Which candidate A–D is '+(want?'similar':'not similar')+' to the reference triangle? Match colored vertices. Rotation, reflection and uniform scaling are allowed.'})),
+    make(r,q){const p=[[-24,-20],[24,-12],[-12,24+4*int(r,0,2)]],unique=int(r,0,3);
+      const options=range(4).map(i=>{const valid=q.want?(i===unique):(i!==unique),f=pick(r,[.75,1,1.25]),turn=int(r,0,3),flip=pick(r,[-1,1]),stretch=valid?1:pick(r,[1.5,1.75]);
+        return p.map(([x,y])=>{x*=stretch*f*flip;y*=f;for(let k=0;k<turn;k++)[x,y]=[-y,x];return [x,y];});});return {p,options};},
+    draw(g,s){[s.p,...s.options].forEach((pts,i)=>{const cx=simX[i],cy=191;pts.forEach(([x,y],j)=>{const [X,Y]=pts[(j+1)%3];g.line(cx+x,cy+y,cx+X,cy+Y,'#78869a',3);});pts.forEach(([x,y],j)=>g.dot(cx+x,cy+y,6,j+1));g.text(i?letters[i-1]:'Reference',cx,289,17,'center');});},
+    solve:(s,q)=>uniqueIndex(s.options,m=>equivalent(s.p,m)===q.want),
+    read(v,q){const pts=simX.map(cx=>[1,2,3].map(ink=>{const o=v.blobs([cx-67,118,134,145],ink)[0];return [o.x,o.y];}));
+      const signature=m=>[dist(m[0],m[1]),dist(m[1],m[2]),dist(m[2],m[0])];const ref=signature(pts[0]);
+      const errors=pts.slice(1).map(m=>{const s=signature(m),f=s.reduce((a,b)=>a+b,0)/ref.reduce((a,b)=>a+b,0);return Math.max(...s.map((d,i)=>Math.abs(1-d/(ref[i]*f))));});
+      return result(uniqueIndex(errors,e=>(e<.05)===q.want),'Maximum proportional edge errors for A–D: '+errors.map(n=>Math.round(n*100)+'%').join(', ')+'.');}});
+  const rotationQs=[{text:'Which tile A–D comes next if the same rotation continues from panel to panel?'},{text:'Complete the rotation sequence. Which candidate A–D preserves the turn between each pair of tiles?'}];
+  define('rotation',{family,name:'Sequence rotation',title:'Rotating tile sequence',choices:letters,queries:rotationQs,
+    make(r){const m=motif(r),op=pick(r,ops.slice(0,3)),shown=[m];for(let i=0;i<2;i++)shown.push(transform(shown.at(-1),op));return {shown,op,options:optionSet(r,m,transform(shown[2],op))};},
+    draw(g,s){s.shown.forEach((m,i)=>tileDraw(g,m,...tileSlot(i),28));g.text('?',658,129,35,'center');g.line(44,187,775,187,'#d1d8e3');options(g,s.options);},
+    solve:s=>uniqueIndex(s.options,m=>same(m,transform(s.shown[2],s.op))),
+    read(v){const m=range(3).map(i=>tileRead(v,...tileSlot(i),28,3));const op=ops.slice(0,3).find(o=>same(transform(m[0],o),m[1])&&same(transform(m[1],o),m[2]));if(!op)throw Error('No constant rotation in the visible panels.');
+      return result(uniqueIndex(readChoices(v),t=>same(t,transform(m[2],op))),'Both observed steps match '+op.toLowerCase()+'. Applied the same step to the third panel.');}});
+  function arithmetic(r,multi,h){
+    const steps=multi?shuffle(r,[-1,0,1]):[pick(r,h?[-3,-2,2,3]:[-2,-1,1,2])];
+    const top=multi?8:18,start=steps.map(d=>int(r,1+Math.max(0,-3*d),top-Math.max(0,3*d)));
+    const seq=range(4).map(i=>start.map((v,j)=>v+i*steps[j])),target=seq[3],opts=[target];
+    while(opts.length<4){const v=[...target],j=int(r,0,v.length-1);v[j]=Math.max(0,Math.min(top+1,v[j]+pick(r,[-3,-2,-1,1,2,3])));if(!opts.some(a=>same(a,v)))opts.push(v);}
+    return {shown:seq.slice(0,3),options:shuffle(r,opts)};
+  }
+  function dotPanel(g,counts,i,bottom,multi){const x=43+i*190,y=bottom?208:70;g.frame(x,y,156,98);
+    counts.forEach((n,col)=>{if(multi&&col)g.line(x+col*50,y+3,x+col*50,y+95,'#d2d9e5',1);
+      for(let k=0;k<n;k++){if(multi)g.dot(x+27+col*50,y+89-k*9,3.6,col+1);else g.dot(x+19+(k%6)*23,y+18+Math.floor(k/6)*22,6,1);}});
+    if(bottom)g.text(letters[i],x+78,y+122,17,'center');}
+  function observeDots(v,i,bottom,multi){const box=[44+i*190,(bottom?208:70)+1,154,95];return (multi?[1,2,3]:[1]).map(k=>v.blobs(box,k).length);}
+  for(const multi of [false,true]){const id=multi?'columns':'arithmetic';
+    define(id,{family,name:multi?'Multi-column arithmetic':'Sequence arithmetic',title:multi?'Independent column progressions':'Quantity progression',choices:letters,
+      queries:[{text:multi?'Which panel A–D comes next when each colored column follows its own arithmetic progression?':'Which panel A–D completes the arithmetic progression of dot counts?'},{text:multi?'Continue each of the three columns independently by its observed step. Which candidate A–D matches all three?':'Use the constant change in quantity between the upper panels. Which candidate A–D comes next?'}],
+      make:(r,q,h)=>arithmetic(r,multi,h),draw(g,s){s.shown.forEach((m,i)=>dotPanel(g,m,i,false,multi));g.text('?',691,134,35,'center');s.options.forEach((m,i)=>dotPanel(g,m,i,true,multi));},
+      solve(s){const next=s.shown[2].map((v,i)=>2*v-s.shown[1][i]);return uniqueIndex(s.options,m=>same(m,next));},
+      read(v){const a=range(3).map(i=>observeDots(v,i,false,multi)),step=a[1].map((n,i)=>n-a[0][i]);
+        if(step.some((d,i)=>a[2][i]-a[1][i]!==d))throw Error('Measured panels do not form a progression.');
+        const target=a[2].map((n,i)=>n+step[i]);return result(uniqueIndex(range(4).map(i=>observeDots(v,i,true,multi)),m=>same(m,target)),'Measured '+a.map(x=>'['+x.join(', ')+']').join(' → ')+'. Predicted ['+target.join(', ')+'].');}});
+  }
+})();
+</script>
+<script>(() => {
+  'use strict';
+  const L=window.ReasoningLab,{E,catalog,range,painter,pixels,same}=L;
+  const groupInfo={
+    geometry:['Geometric reasoning','Measure, rank and match geometric figures.'],
+    quantities:['Counting & measurement','Locate marks, trace grid edges and compare paired boards.'],
+    patterns:['Symmetry & patterns','Test visible repetitions and reflections.'],
+    sequences:['Sequences & transforms','Infer an operation from the visible figures and apply it to the next panel.']
+  };
+  const families=Object.fromEntries(Object.entries(groupInfo).map(([id,[name,method]])=>[id,{name,method,
+    variants:['Original','Restyled','Changed scene'],notes:['Generated source scene','New palette · same question and answer','New scene · same question, different answer'],
+    types:Object.fromEntries(Object.values(catalog).filter(d=>d.family===id).map(d=>[d.id,d.name]))}]));
+  const prompts=new Map();
+  for(const d of Object.values(catalog))for(const q of d.queries)prompts.set(q.text,[d,q]);
+  function query(d,seed,difficulty){
+    const rng=E.random((seed^0x9e3779b9)>>>0),q=L.pick(rng,d.queries);
+    if(d.id!=='recolor')return q;
+    const n=difficulty==='close'?6:5,first=L.int(rng,1,n-2),last=L.int(rng,first+1,n);
+    return {...q,first,last,text:q.text+' Inspect rows '+first+' through '+last+' from the top.'};
+  }
+  function decodeQuestion(text){
+    if(prompts.has(text))return prompts.get(text);
+    const match=/^(.*) Inspect rows ([1-6]) through ([1-6]) from the top\.$/.exec(text);
+    if(!match)return null;
+    const base=prompts.get(match[1]);if(base?.[0].id!=='recolor')return null;
+    return [base[0],{...base[1],first:+match[2],last:+match[3],text}];
+  }
+  function render(d,scene,q,style,seed){
+    const g=painter(style,d.title,String(seed>>>0).padStart(6,'0'));d.draw(g,scene,q);return g.c;
+  }
+  function create(family,seed,id,difficulty){
+    const d=catalog[id];if(d?.family!==family)throw Error('Unknown task for this vertical.');
+    const q=query(d,seed,difficulty),r=E.random((seed^0x5f356495)>>>0),hard=difficulty==='close';
+    const original=d.make(r,q,hard),expected=d.solve(original,q);
+    let edited;
+    for(let attempt=0;attempt<160;attempt++){
+      const candidate=d.edit?d.edit(r,original,q,hard):d.make(r,q,hard);if(d.solve(candidate,q)!==expected){edited=candidate;break;}
+    }
+    if(!edited)throw Error('Could not construct an answer-changing scene for '+id+'.');
+    const tasks=[original,original,edited].map((s,i)=>{
+      const canvas=render(d,s,q,i===1?1:0,seed);
+      const key=String(d.solve(s,q)),check=d.read(pixels(canvas),q);
+      if(key!==check.answer)throw Error(id+' source / pixel disagreement at seed '+seed+': '+key+' versus '+check.answer);
+      return {canvas,key,check,rows:{scene:s,query:q},variant:families[family].variants[i]};
+    });
+    return {family,seed,question:id,difficulty,prompt:q.text,choices:d.choices,tasks};
+  }
+  // This image-only baseline compares coarse color thumbnails to separately generated
+  // calibration examples. It never opens the evaluation scene or calls a pixel verifier.
+  const cache=new Map();
+  function thumbnail(canvas){
+    const small=E.surface(36,15),g=small.getContext('2d');g.drawImage(canvas,20,56,780,287,0,0,36,15);
+    const p=g.getImageData(0,0,36,15).data,a=new Int16Array(36*15*3);
+    for(let i=0,j=0;i<p.length;i+=4){a[j++]=p[i]-p[i+1];a[j++]=p[i+2]-p[i+1];a[j++]=255-(p[i]+p[i+1]+p[i+2])/3;}
+    small.width=1;return a;
+  }
+  function predict(canvas,d,q){
+    const id=q.text;
+    if(!cache.has(id)){
+      const samples=[];
+      for(let i=0;i<24;i++){
+        const r=E.random((0xc417102b+Math.imul(i,7919))>>>0);
+        const s=d.make(r,q,i%2===1 || q.last===6),c=render(d,s,q,i%2,i);
+        samples.push({a:thumbnail(c),label:String(d.solve(s,q))});c.width=1;
+      }
+      if(cache.size>=20)cache.delete(cache.keys().next().value);
+      cache.set(id,samples);
+    }
+    const f=thumbnail(canvas);let best=Infinity,answer;
+    for(const {a,label} of cache.get(id)){let sum=0;for(let j=0;j<f.length;j++)sum+=(a[j]-f[j])**2;
+      if(sum<best){best=sum;answer=label;}}
+    return answer;
+  }
+  function normalize(raw,id){
+    const t=raw.trim().replace(/^["'*`\s]+|["'*`.!\s]+$/g,'').toLowerCase();
+    const choices=catalog[id]?.choices;
+    if(!choices)return /^\d{1,4}$/.test(t)?String(Number(t)):null;
+    const order=s=>s.toLowerCase().replace(/[\s,>→]+/g,' ').trim();
+    return choices.find(c=>order(c)===order(t))||null;
+  }
+  function register(old){
+    const all={...old.families,...families},is=id=>Object.hasOwn(families,id);
+    return {...old,families:all,labFamilies:families,labNormalize:normalize,labQuery:(id,seed,difficulty)=>query(catalog[id],seed,difficulty),
+      create:(f,s,k,d)=>is(f)?create(f,s,k,d):old.create(f,s,k,d),
+      sourceAnswer:(f,k,row)=>is(f)?String(catalog[k].solve(row.scene,row.query)):old.sourceAnswer(f,k,row),
+      promptFor:(f,k,s,d)=>is(f)?query(catalog[k],s,d).text:old.promptFor(f,k),
+      pixelCheck:(c,f,k,p)=>{if(!is(f))return old.pixelCheck(c,f,k);
+        const found=decodeQuestion(p);if(found?.[0].id!==k)throw Error('Question does not match its pixel check.');return found[0].read(pixels(c),found[1]);},
+      predict:(c,p)=>{const found=decodeQuestion(p);return found?predict(c,...found):old.predict(c,p);},
+      tourPlan:(seed,first,selected)=>{const ids=Object.keys(all),offset=ids.indexOf(first);return ids.map((_,i)=>{const family=ids[(i+offset)%ids.length],s=E.nextSeed(seed,i),types=Object.keys(all[family].types);return {family,seed:s,key:i===0?selected||types[0]:types[s%types.length]};});},
+      skillScores:items=>Object.entries(all).flatMap(([family,def])=>{const rows=items.filter(i=>(i.family||'charts')===family);return rows.length?[{family,name:def.name,...E.score(rows)}]:[];})
+    };
+  }
+  window.StudioLab={register,families,catalog,normalize,decodeQuestion,query};
+  window.VisualSkills=register(window.VisualSkills);
+})();
+</script>
+<script>(() => {
 'use strict';
 const $=id=>document.getElementById(id), E=window.VTF, S=window.VisualSkills;
 const paths={
@@ -491,7 +927,9 @@ const paths={
 };
 document.querySelectorAll('[data-icon]').forEach(el=>{el.innerHTML='<svg class="ico" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="'+paths[el.dataset.icon]+'"/></svg>'});
 const safe=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let family='charts',comparison=false;
+let family='quantities',comparison=false;
+const skillCount=Object.keys(S.families).length;
+const selectedTask=(f,s,wanted)=>wanted!=='auto'?wanted:Object.keys(S.families[f].types)[Math.floor(E.random(s^0x53a19)()*Object.keys(S.families[f].types).length)];
 let seed=82041, active=0, challenge=null, runState=null, sceneIndex=0, control=null, runError='', guesses={};
 let history=[],memory=new Map(),db=null,noticeTimer;
 const pct=(n,d)=>d?Math.round(n/d*100)+'%':'—';
@@ -500,7 +938,7 @@ const formatDate=t=>new Date(t).toLocaleString(undefined,{month:'short',day:'num
 function selectFamily(value,key){
   family=value;
   const def=S.families[family];
-  $('question').innerHTML=Object.entries(def.types).map(([id,label])=>'<option value="'+id+'">'+label+'</option>').join('');
+  $('question').innerHTML='<option value="auto">Auto-generate task</option>'+Object.entries(def.types).map(([id,label])=>'<option value="'+id+'">'+label+'</option>').join('');
   if(key&&Object.hasOwn(def.types,key))$('question').value=key;
   document.querySelectorAll('.skillcard').forEach(b=>{const chosen=b.dataset.family===family;b.classList.toggle('is-active',chosen);b.setAttribute('aria-pressed',String(chosen));});
   $('difficulty').options[1].textContent=family==='charts'?'Close call':'Fine detail';
@@ -514,6 +952,12 @@ document.querySelectorAll('.skillcard').forEach(button=>{
   }else if(skill==='counting'){
     dot(28,23,11,'#5d8ed4');dot(62,55,11,'#5d8ed4');dot(98,22,11,'#5d8ed4');g.fillStyle='#80af9b';g.fillRect(20,47,20,20);
     poly([[61,11],[75,34],[47,34]],'#d78e56');poly([[100,42],[114,64],[86,64]],'#d78e56');
+  }else if(S.labFamilies[skill]){
+    const purple='#8271cf',green='#65a894',gold='#d99a5c';
+    if(skill==='geometry'){poly([[10,59],[33,16],[51,59]],purple);dot(83,39,18,green);}
+    if(skill==='quantities'){for(let i=0;i<12;i++){g.fillStyle=[purple,green,gold][(i*7+Math.floor(i/4))%3];g.fillRect(21+i%4*21,11+Math.floor(i/4)*21,17,17);}}
+    if(skill==='patterns'){[[25,24],[89,24],[43,40],[71,40],[25,56],[89,56]].forEach(([x,y],i)=>dot(x,y,7,i<2?purple:green));}
+    if(skill==='sequences'){[0,1,2].forEach((n)=>{for(let i=0;i<=n;i++)dot(23+n*36,52-i*15,6,[purple,gold,green][n]);});}
   }else{
     poly(Array.from({length:10},(_,i)=>{const a=i*Math.PI/5-Math.PI/2,r=i%2?8:19;return [61+Math.cos(a)*r,39+Math.sin(a)*r];}),'#cf9c34');
     dot(21,40,10,'#6292ce');poly([[103,30],[114,41],[103,52],[92,41]],'#9b75ce');
@@ -537,7 +981,7 @@ function draw(){
   const t=challenge.tasks[active],c=$('chart');c.getContext('2d').drawImage(t.canvas,0,0);
   const def=S.families[challenge.family];
   c.setAttribute('aria-label',t.variant+' image for '+def.name+'. Measurements are available under Inspect checks.');
-  $('variantNote').textContent=def.notes[active];$('questionText').textContent=challenge.prompt;$('seedText').textContent=pad(challenge.seed);
+  $('variantNote').textContent=challenge.question==='recolor'&&active===2?'One bin edited in the after plan · same before plan':def.notes[active];$('questionText').textContent=challenge.prompt;$('seedText').textContent=pad(challenge.seed);
   document.querySelectorAll('.variant').forEach((b,i)=>{
     b.lastChild.textContent=def.variants[i];b.classList.toggle('selected',i===active);b.setAttribute('aria-pressed',String(i===active));
   });
@@ -566,7 +1010,16 @@ function draw(){
   }
 }
 $('compare').onclick=()=>{comparison=!comparison;if(comparison&&!active)active=2;draw();};
-function regenerate(){challenge=S.create(family,seed,$('question').value,$('difficulty').value);draw();results();}
+function updatePipeline(c,verified,score){
+  $('pipeScene').textContent=S.families[c.family].name+' · #'+c.seed;
+  $('pipeQuestion').textContent=S.families[c.family].types[c.question];
+  $('pipeVerify').textContent=verified;
+  $('pipeScore').textContent=score;
+}
+function regenerate(){
+  challenge=S.create(family,seed,selectedTask(family,seed,$('question').value),$('difficulty').value);
+  updatePipeline(challenge,'3 canvas answers agree','Ready');draw();results();
+}
 document.querySelectorAll('.variant').forEach((b,i)=>b.onclick=()=>{active=i;if(!i)comparison=false;draw();});
 $('generate').onclick=()=>{const a=new Uint32Array(1);crypto.getRandomValues(a);setSeed(a[0]);$('live').textContent='New verified challenge generated.';};
 $('seedEdit').onclick=()=>{showDialog('Replay a challenge','<form id="seedForm"><label for="seedInput">Challenge seed</label><input id="seedInput" required inputmode="numeric" pattern="[0-9]{1,10}" maxlength="10" value="'+seed+'"><p class="fieldnote">Use the same skill, seed, question type and difficulty to reproduce a challenge.</p><div class="dialogbuttons"><button class="btn primary">Load challenge</button></div></form>');
@@ -575,6 +1028,9 @@ function saveFile(href,name){const a=document.createElement('a');a.href=href;a.d
 $('downloadImg').onclick=()=>saveFile(challenge.tasks[active].canvas.toDataURL('image/png'),challenge.family+'-'+challenge.seed+'-'+active+'.png');
 $('verify').onclick=()=>{
  const t=challenge.tasks[active],def=S.families[challenge.family];let rows,header;
+ if(S.labFamilies[challenge.family]){
+   showDialog('Independent answer checks','<div class="helpblock"><h3>'+safe(def.types[challenge.question])+'</h3><p>'+safe(challenge.prompt)+'</p></div><details><summary>Reveal answer and measurements</summary><div class="dialogpair"><strong>Source answer '+safe(t.key)+'</strong><span class="chip good">Pixel answer '+safe(t.check.answer)+'</span></div><p class="labmethod">'+safe(t.check.readings[0].detail)+'</p><details><summary>Generated scene data</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+safe(JSON.stringify(t.rows,null,2))+'</pre></details></details>');return;
+ }
  if(challenge.family==='charts'){
    const reads=new Map(t.check.readings.map(r=>[r.label,r.pixels]));
    header=['Region','Source units','Measured height'];rows=t.rows.map(r=>[r.label,r.value,reads.get(r.label)+' px']);
@@ -585,6 +1041,7 @@ $('verify').onclick=()=>{
  showDialog('Independent answer checks','<div class="helpblock"><h3>'+safe(t.variant)+' · '+def.name+'</h3><p>'+def.method+'</p></div><details style="margin-top:12px"><summary>Reveal the answer and measurements</summary><div class="dialogpair"><span>Source answer <strong>'+safe(t.key)+'</strong></span><span class="chip good">Pixel answer '+safe(t.check.answer)+'</span></div><canvas id="pixelOverlay" width="820" height="356" aria-label="Detected image elements with relevant measurements outlined in green"></canvas><p class="fieldnote">Green outlines mark the measurements used for this answer.</p><div class="answerlist"><table class="checktable"><tr>'+header.map(x=>'<th>'+x+'</th>').join('')+'</tr>'+rows.map(row=>'<tr>'+row.map(v=>'<td>'+safe(v)+'</td>').join('')+'</tr>').join('')+'</table></div></details>');
  const overlay=$('pixelOverlay').getContext('2d');overlay.drawImage(t.canvas,0,0);
  for(const reading of t.check.readings){
+   if(!reading.bounds)continue;
    const [x,y,w,h]=reading.bounds;
    const selected=challenge.family==='charts'?reading.label===t.key:reading.selected;
    overlay.strokeStyle=selected?'#087750':'#8e8d9977';overlay.lineWidth=selected?3:1;
@@ -595,57 +1052,81 @@ $('verify').onclick=()=>{
 const guessButton=document.createElement('button');guessButton.className='guessbtn';guessButton.textContent='Try it yourself';document.querySelector('.prompt').append(guessButton);
 guessButton.onclick=()=>{
  const t=challenge.tasks[active],guessKey=[challenge.family,challenge.seed,challenge.question,active].join('-');
- const form=challenge.choices?'<div class="choices">'+challenge.choices.map(s=>'<button class="btn white" data-guess="'+s+'">'+s+'</button>').join('')+'</div>':'<form id="numGuess" class="numguess"><input type="number" min="0" max="99" step="1" required id="guessN" aria-label="Object count" placeholder="Your count"><button class="btn primary">Check guess</button></form>';
+ const form=challenge.choices?'<div class="choices">'+challenge.choices.map(s=>'<button class="btn white" data-guess="'+s+'">'+s+'</button>').join('')+'</div>':'<form id="numGuess" class="numguess"><input type="number" min="0" max="9999" step="1" required id="guessN" aria-label="Numeric answer" placeholder="Your answer"><button class="btn primary">Check guess</button></form>';
  showDialog('Your prediction','<div class="helpblock"><h3>'+safe(challenge.prompt)+'</h3><p>'+t.variant+' · seed '+pad(challenge.seed)+'</p></div>'+form+'<p id="guessFeedback" class="fieldnote" role="status"></p>');
  const compare=v=>{guesses[guessKey]=v;$('guessFeedback').textContent=v===t.key?'Correct. Both checks confirm '+t.key+'.':'You picked '+v+'. The verified answer is '+t.key+'.';};
  if(guesses[guessKey]!==undefined)compare(guesses[guessKey]);
  if($('numGuess'))$('numGuess').onsubmit=e=>{e.preventDefault();compare(String(Number($('guessN').value)));};
  document.querySelectorAll('[data-guess]').forEach(b=>b.onclick=()=>compare(b.dataset.guess));
 };
-$('method').onclick=()=>showDialog('How the evaluation works','<div class="helpblock"><h3>Try the three-skill demo</h3><p>One click runs three questions across nine images. Explore a single skill with the question and batch controls, or make your own prediction in the viewer.</p></div><div class="helpblock"><h3>Make one controlled change</h3><p>Each question gets an original, a restyled image with the same answer, and an edit with a different answer. The edit swaps two values, adds a matching object, or exchanges two neighbors.</p></div><div class="helpblock"><h3>Verify the rendered pixels</h3><p>The chart reader measures bar heights. The scene reader isolates colored objects and measures their silhouettes and positions. Each pixel answer must match the answer computed from the source.</p></div><div class="helpblock"><h3>Evaluate independently</h3><p>The local baseline uses coarse images, nearest-neighbor ranking for charts, and shape-template matching for scenes. Live vision models receive only one question and PNG per request. Pair scores require both responses to be correct.</p></div>');
+$('method').onclick=()=>showDialog('How the live pipeline works','<div class="helpblock"><h3>Generate a scene and a question</h3><p>A seed samples a structured scene. Task rules compose a question using its public parameters, such as the target color, inspected rows, direction or missing tile.</p></div><div class="helpblock"><h3>Read back the image</h3><p>Each challenge contains an original, a restyled control and an answer-changing scene. When a run starts, every PNG is decoded and measured independently before inference.</p></div><div class="helpblock"><h3>Evaluate the selected model</h3><p>The local baseline reads image features. New reasoning tasks use nearest-neighbor thumbnail matching against separate calibration examples. A live vision endpoint receives one PNG and its question. Results include the raw reply, reference and paired scores.</p></div><div class="helpblock"><h3>Pattern coverage</h3><p>Frieze and wallpaper tasks distinguish translation-only and half-turn groups in periodic strips and two-dimensional patches.</p></div>');
+$('library').onclick=()=>{
+ const entries=Object.entries(S.families);
+ const total=entries.reduce((n,[,def])=>n+Object.keys(def.types).length,0);
+ const groups=entries.map(([f,def])=>'<section class="taskgroup"><h3>'+safe(def.name)+'</h3><div>'+Object.entries(def.types).map(([k,name])=>'<button class="taskpick" data-f="'+safe(f)+'" data-k="'+safe(k)+'">'+safe(name)+'</button>').join('')+'</div></section>').join('');
+ showDialog('Task library · '+total+' types','<label for="findTask">Find a task</label><input id="findTask" type="search" placeholder="Search task or skill">'+groups+'<p id="noTasks" hidden>No matching tasks.</p>');
+ const buttons=[...$('dialogBody').querySelectorAll('.taskpick')];
+ for(const b of buttons)b.onclick=()=>{$('dialog').close();selectFamily(b.dataset.f,b.dataset.k);setSeed(seed);};
+ $('findTask').oninput=()=>{const needle=$('findTask').value.trim().toLowerCase();
+  for(const b of buttons)b.hidden=!(S.families[b.dataset.f].name+' '+b.textContent).toLowerCase().includes(needle);
+  $('dialogBody').querySelectorAll('.taskgroup').forEach(group=>group.hidden=![...group.querySelectorAll('button')].some(b=>!b.hidden));
+  $('noTasks').hidden=buttons.some(b=>!b.hidden);
+ };
+};
 function updateConfig(){
  const remote=$('model').value==='openai',n=Number($('size').value)*3;
- $('tourLabel').textContent=remote?'Run demo · 9 requests':'Run three-skill demo';
+ $('tourLabel').textContent=remote?'All skills · '+skillCount*3+' requests':'Run all '+skillCount+' skills';
  $('remoteControls').hidden=!remote;$('runSummary').textContent=remote?n+' images · '+n+' API requests':n+' images per run';
 }
 $('model').onchange=$('size').onchange=updateConfig;
 $('question').onchange=$('difficulty').onchange=()=>setSeed(seed);
 function lock(busy){
  document.querySelectorAll('.skillcard').forEach(b=>b.disabled=busy);
- ['tour','generate','seedEdit','model','question','difficulty','size','apiKey','modelName','run','navHistory'].forEach(id=>$(id).disabled=busy);
+ ['tour','generate','library','freshRun','apiBase','seedEdit','model','question','difficulty','size','apiKey','modelName','run','navHistory'].forEach(id=>$(id).disabled=busy);
  $('cancel').hidden=!busy;$('runLabel').textContent=busy?'Evaluating…':'Run evaluation';
 }
+function apiSettings(){
+ const name=$('modelName').value.trim(),key=$('apiKey').value.trim(),u=new URL($('apiBase').value.trim());
+ if(u.username||u.password||u.search||u.hash)throw Error('Use an API base URL without credentials, query or fragment.');
+ const local=['localhost','127.0.0.1','[::1]'].includes(u.hostname);
+ if(u.protocol!=='https:'&&!(local&&u.protocol==='http:'))throw Error('Use HTTPS or a local HTTP inference server.');
+ if(!name||(!key&&u.hostname==='api.openai.com'))throw Error('Enter the model ID and your OpenAI API key.');
+ return {name,key,endpoint:u.href.replace(/\/$/,'')+'/chat/completions'};
+}
+function loadPng(url){return new Promise((resolve,reject)=>{
+ const img=new Image();img.onload=()=>{try{const c=E.surface(E.W,E.H);c.getContext('2d').drawImage(img,0,0);resolve(c);}catch(e){reject(e);}};
+ img.onerror=()=>reject(Error('Failed to decode the generated PNG.'));img.src=url;
+});}
 async function remoteAnswer(image,c,settings,signal) {
  const request=new AbortController(),onStop=()=>request.abort();
  signal.addEventListener('abort',onStop,{once:true});if(signal.aborted)request.abort();
  const timer=setTimeout(()=>request.abort('timeout'),60000);
  try{
-  const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',signal:request.signal,
-   headers:{'Content-Type':'application/json','Authorization':'Bearer '+settings.key},
+  const headers={'Content-Type':'application/json'};if(settings.key)headers.Authorization='Bearer '+settings.key;
+  const suffix=c.choices?' Reply only with one allowed answer: '+c.choices.join(' / ')+'.':' Reply with one whole number in digits.';
+  const r=await fetch(settings.endpoint,{method:'POST',signal:request.signal,redirect:'error',headers,
    body:JSON.stringify({model:settings.name,messages:[{role:'user',content:[
-    {type:'text',text:c.prompt+(c.family==='counting'?' Reply with one whole number in digits.':c.family==='spatial'?' Reply with one shape name.':' Reply with one region label.')},
-    {type:'image_url',image_url:{url:image}}
+    {type:'image_url',image_url:{url:image}},{type:'text',text:c.prompt+suffix}
    ]}]})});
-  if(!r.ok)throw Error('OpenAI returned HTTP '+r.status+'. '+({401:'Check the API key.',403:'Check project and model access.',404:'Check the model ID.',429:'Check request limits and available credit.'}[r.status]||'Check the model and try again.'));
+  if(!r.ok)throw Error('Vision endpoint returned HTTP '+r.status+'. '+({401:'Check the API key.',403:'Check project and model access.',404:'Check the model ID.',429:'Check request limits and available credit.'}[r.status]||'Check the model and try again.'));
   const json=await r.json(),raw=json.choices?.[0]?.message?.content;
   if(typeof raw!=='string'||!raw.trim())throw Error('The provider returned no text response.');
   const clean=raw.trim().replace(/^[\s"'*`]+|[\s"'*`.!]+$/g,'').toLowerCase();
-  return {raw,answer:c.family==='counting'?(/^\d{1,3}$/.test(clean)?String(Number(clean)):null):(c.choices.find(s=>s.toLowerCase()===clean)||null)};
- }catch(error){if(!signal.aborted&&request.signal.aborted)throw Error('OpenAI did not respond within 60 seconds.');throw error;}
+  return {raw,answer:S.labFamilies[c.family]?S.labNormalize(raw,c.question):c.family==='counting'?(/^\d{1,3}$/.test(clean)?String(Number(clean)):null):(c.choices.find(s=>s.toLowerCase()===clean)||null)};
+ }catch(error){if(!signal.aborted&&request.signal.aborted)throw Error('The vision endpoint did not respond within 60 seconds.');throw error;}
  finally{clearTimeout(timer);signal.removeEventListener('abort',onStop);}
 }
 async function evaluate(tour=false){
- const config={seed,family,mode:tour?'tour':'single',question:$('question').value,difficulty:$('difficulty').value,size:tour?3:Number($('size').value),batchSize:Number($('size').value),evaluator:$('model').value};
- const settings={name:$('modelName').value.trim(),key:$('apiKey').value.trim()};
- if(config.evaluator==='openai'&&(!settings.key||!settings.name)){note('Enter a model ID and API key to run the live evaluation.');(!settings.name?$('modelName'):$('apiKey')).focus();return;}
+ const config={seed,family,mode:tour?'tour':'single',question:selectedTask(family,seed,$('question').value),taskMode:$('question').value,difficulty:$('difficulty').value,size:tour?skillCount:Number($('size').value),batchSize:Number($('size').value),evaluator:$('model').value};
+ let settings={};if(config.evaluator==='openai')try{settings=apiSettings();config.endpoint=settings.endpoint;}catch(err){note(err.message);return;}
  const current=new AbortController();control=current;lock(true);runError='';runState=null;sceneIndex=0;active=0;
- const plan=tour?S.tourPlan(seed,family,config.question):Array.from({length:config.size},(_,i)=>({family,seed:E.nextSeed(seed,i),key:config.question}));
+ const plan=tour?S.tourPlan(seed,family,config.question):Array.from({length:config.size},(_,i)=>({family,seed:E.nextSeed(seed,i),key:selectedTask(family,E.nextSeed(seed,i),config.taskMode)}));
  comparison=false;
- const model=config.evaluator==='openai'?settings.name:'Local vision baseline',items=[];
+ const model=config.evaluator==='openai'?settings.name:'Local image baseline',items=[];
  let done=0,phase='';
  function progress(){$('resultState').textContent='Running';$('resultState').className='state';$('resultBody').innerHTML='<div class="resultmeta">Evaluating image '+Math.min(done+1,config.size*3)+' of '+config.size*3+' · '+safe(model)+'</div><div class="progress"><span style="width:'+done/(config.size*3)*100+'%"></span></div>'; }
  try {
-  challenge=S.create(family,seed,config.question,config.difficulty);draw();progress();
+  if(challenge.family!==family||challenge.seed!==seed||challenge.question!==config.question||challenge.difficulty!==config.difficulty)challenge=S.create(family,seed,config.question,config.difficulty);draw();progress();
   for(let i=0;i<config.size;i++){
    const step=plan[i];
    const c=i===0?challenge:S.create(step.family,step.seed,step.key,config.difficulty);
@@ -656,25 +1137,33 @@ async function evaluate(tour=false){
     progress();
     await new Promise(ok=>setTimeout(ok,12));current.signal.throwIfAborted();
     const image=t.canvas.toDataURL('image/png');
-    const started=performance.now();
-    const raw=config.evaluator==='local'?S.predict(t.canvas,c.prompt):null;
-    const response=raw?{raw,answer:raw}:await remoteAnswer(image,c,settings,current.signal);
+    const decoded=await loadPng(image);let response;const started=performance.now();
+    try{
+      const measured=c.family==='charts'?E.verifyImage(decoded,c.question):S.pixelCheck(decoded,c.family,c.question,c.prompt);
+      if(measured.answer!==t.key||JSON.stringify(measured.readings)!==JSON.stringify(t.check.readings))throw Error('Exported PNG failed the independent check.');
+      updatePipeline(c,(done+1)+' / '+(config.size*3)+' PNGs checked','Testing '+model);
+      if(config.evaluator==='local'){const raw=S.predict(decoded,c.prompt);response={raw,answer:raw};}
+      else response=await remoteAnswer(image,c,settings,current.signal);
+    }finally{decoded.width=1;}
     current.signal.throwIfAborted();response.latencyMs=Math.round(performance.now()-started);
     item.answers.push(response);item.keys.push(t.key);item.images.push(image);
-    item.evidence.push({variant:t.variant,source:t.rows,pixels:t.check.readings,pixelAnswer:t.check.answer});
+    item.evidence.push({pngVerified:true,variant:t.variant,source:t.rows,pixels:t.check.readings,pixelAnswer:t.check.answer});
     done++;
    }
    items.push(item);
   }
-  const record={version:2,id:crypto.randomUUID(),time:Date.now(),config,model,items,stats:E.score(items),skills:S.skillScores(items)};
+  const record={version:3,id:crypto.randomUUID(),time:Date.now(),config,model,items,stats:E.score(items),skills:S.skillScores(items)};
   await remember(record);runState=record;
   inspect(0,tour);$('live').textContent='Evaluation complete. '+record.stats.correct+' of '+record.stats.total+' correct.';
   (tour?document.querySelector('.preview'):$('results')).scrollIntoView({behavior:'smooth',block:tour?'center':'nearest'});
  }catch(err){
   if(tour){challenge=S.create(config.family,config.seed,config.question,config.difficulty);active=0;draw();}
-  runError=current.signal.aborted?'Run canceled after '+done+' of '+config.size*3+' images.':('Run stopped after '+done+' of '+config.size*3+' images. '+(err.message||'Request failed.'));results();$('live').textContent=runError;}
+  runError=current.signal.aborted?'Run canceled after '+done+' of '+config.size*3+' images.':('Run stopped after '+done+' of '+config.size*3+' images. '+(err.message||'Request failed.'));results();updatePipeline(challenge,done+' / '+(config.size*3)+' images scored','Incomplete');$('live').textContent=runError;}
  finally{control=null;lock(false);}
 }
+$('freshRun').onclick=()=>{if($('model').value==='openai')try{apiSettings();}catch(e){note(e.message);return;}
+ $('generate').click();return evaluate(false);
+};
 $('run').onclick=()=>evaluate(false);$('tour').onclick=()=>evaluate(true);$('cancel').onclick=()=>control?.abort();
 function metrics(s){
  return '<div class="metrics">'+[
@@ -687,7 +1176,15 @@ function inspect(index,compare=runState.config.mode==='tour'){
  const r=runState,it=r.items[index],skill=it.family||'charts',key=it.type||r.config.question;
  sceneIndex=index;active=compare?2:0;comparison=compare;seed=it.seed;guesses={};
  selectFamily(skill,key);$('difficulty').value=r.config.difficulty;
- challenge=S.create(skill,seed,key,r.config.difficulty);draw();results();
+ challenge=S.create(skill,seed,key,r.config.difficulty);
+ updatePipeline(challenge,r.version>=3?r.stats.total+' PNGs checked':'Saved run',r.stats.correct+' / '+r.stats.total+' correct');draw();results();
+ const preview=challenge;
+ if(it.images?.length===3)Promise.all(it.images.map(loadPng)).then(images=>{
+   if(challenge!==preview||runState!==r){images.forEach(c=>c.width=1);return;}
+   preview.prompt=it.question;
+   preview.tasks=images.map((canvas,i)=>({canvas,variant:it.evidence[i].variant,key:it.keys[i],rows:it.evidence[i].source,check:{answer:it.evidence[i].pixelAnswer,readings:it.evidence[i].pixels}}));
+   draw();
+ }).catch(()=>note('A saved preview image could not be decoded.'));
 }
 $('nextSkill').onclick=()=>{
  if(!runState)return;
@@ -741,7 +1238,7 @@ async function remember(r){
 function renderHistory(){
  const el=$('historyBody');
  if(!history.length){el.innerHTML='<div class="panel emptyhistory"><h2>No completed runs yet</h2><p>Run your first challenge in the studio to see the results here.</p><button class="btn white" id="startHistory">Open studio</button></div>';$('startHistory').onclick=()=>mode('studio');return;}
- el.innerHTML='<div class="panel">'+history.map(r=>'<div class="historyrow"><div class="historyitem"><span class="chip good">'+pct(r.stats.correct,r.stats.total)+'</span><div><strong>'+safe(r.model)+'</strong><p>#'+pad(r.config.seed)+' · '+r.stats.total+' images · '+(r.config.mode==='tour'?'Three-skill demo':S.families[r.config.family||'charts'].name)+' · '+formatDate(r.time)+'</p></div></div><button class="btn white" data-open="'+safe(r.id)+'">Inspect run</button></div>').join('')+'</div>';
+ el.innerHTML='<div class="panel">'+history.map(r=>'<div class="historyrow"><div class="historyitem"><span class="chip good">'+pct(r.stats.correct,r.stats.total)+'</span><div><strong>'+safe(r.model)+'</strong><p>#'+pad(r.config.seed)+' · '+r.stats.total+' images · '+(r.config.mode==='tour'?'Multi-skill demo':S.families[r.config.family||'charts'].name)+' · '+formatDate(r.time)+'</p></div></div><button class="btn white" data-open="'+safe(r.id)+'">Inspect run</button></div>').join('')+'</div>';
  el.querySelectorAll('[data-open]').forEach(b=>b.onclick=async()=>{
   try{
    const id=b.dataset.open,r=memory.get(id)||await request(db.transaction('runs').objectStore('runs').get(id));
@@ -751,6 +1248,11 @@ function renderHistory(){
   }catch{note('This saved run could not be loaded.');}
  });
 }
+const initial=new URLSearchParams(window.location.search);
+const initialFamily=Object.hasOwn(S.families,initial.get('skill'))?initial.get('skill'):'quantities';
+const initialTask=initial.get('task')||(initialFamily==='quantities'?'recolor':'auto');
+selectFamily(initialFamily,initialTask);if(initial.get('difficulty')==='close')$('difficulty').value='close';
+if(initial.has('seed')&&/^\d{1,10}$/.test(initial.get('seed'))&&Number(initial.get('seed'))<=4294967295)seed=Number(initial.get('seed'));
 updateConfig();regenerate();
 })();
 </script>
