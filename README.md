@@ -1,21 +1,32 @@
 # Visual Task Factory
 
-Open dist/index.html in a modern browser or serve dist as a static directory. The downloadable single-file edition works offline. No installation or API key is required for the local demo.
+Open `dist/index.html` in a modern browser or serve the directory as a static site. The downloadable `dist/visual-task-factory.html` edition runs offline, including the font and local evaluator.
 
-## Demo
+## Present the demo
 
-1. Select a question, difficulty and run size. A run evaluates the original stimulus, a restyled version and a value-swapped version independently.
-2. Inspect the verification strip to compare the source values and measured bar heights. Each chart passes a printed label check as well.
-3. Run the local vision baseline, or enter an OpenAI API key and the ID of a vision-capable Chat Completions model. Live requests go directly from the tab to api.openai.com and may incur charges. The key is never written to browser storage or to a report.
-4. Try Close call on a five-challenge batch. The two competing bars differ by one unit. Inspect per-image hits and missed pairs in the results.
-5. Export a completed run to JSON, including all PNGs, verified answers, measured heights, prompts and raw responses. Completed runs are stored in this browser's IndexedDB, up to the most recent 25.
+Click **Run three-skill demo**. Nine independently scored images cover three visual skills. Use **Next skill** to walk the audience through the original image, the edited image, the model's replies, and the verified answers. **Inspect checks** reveals the measured pixel regions. The scorecard includes accuracy and pair scores for each skill.
 
-## Source
+| Skill | Questions | Restyled image | Answer-changing edit |
+| --- | --- | --- | --- |
+| Chart reading | Highest or lowest regional sales | New colors and bar order | Swap the two competing values |
+| Object counting | Count blue circles, orange triangles or all squares | Rearrange the objects and vary their shades and sizes | Add one matching object |
+| Spatial reasoning | Identify the shape to the left, right, above or below the gold star | Vary colors, sizes and positions while preserving the neighbor relation | Exchange two neighbors |
 
-- dist/engine.js implements the deterministic generator, raster renderer, independently computed pixel answer, baseline and pair metrics.
-- dist/app.js implements the UI, provider adapter, batch runner, report export and history.
-- dist/index.html and dist/style.css contain the interface. Inter is bundled under its SIL Open Font License.
+Choose a skill card to explore that skill alone. Change the question, difficulty or batch size, make a prediction, compare variants, or replay a seed. Fine detail makes shapes smaller and increases counting-scene density. Close call separates chart contenders by one unit.
 
-The offline baseline is a nearest-neighbor classifier over coarse image features. It uses 1,800 fixed seeded training examples and an image-based label recognizer. It is specialized for this chart layout. The full-resolution verifier scans the actual colored spans and reads printed labels separately from the source table. Live vision models receive only one PNG and its question per request.
+## Evaluation and evidence
 
-Scores are exact-label accuracy across images, joint correctness on original/restyled pairs, and joint correctness on original/value-swapped pairs. Interrupted or failed provider calls do not generate a completed score.
+A deterministic source scene supplies each answer. A separate full-resolution pixel reader measures bar heights and recognizes printed region labels. For shape scenes it detects connected colored components, identifies their shapes from silhouette geometry, and reads their colors and centroids. Each task enforces agreement and checks that the three variants have the expected relationship.
+
+The offline baseline is specialized for the generated tasks. It uses 1,800 seeded nearest-neighbor training examples for chart ranking and low-resolution silhouette-template matching for scenes. It receives the rendered image and question. To evaluate an external vision-language model, choose the OpenAI evaluator and enter a compatible Chat Completions model ID and API key. Each request sends one PNG and question directly to OpenAI. API billing may apply. Keys stay in tab memory.
+
+Accuracy is computed per image. Style robustness requires correct answers on the original and restyled images. Change sensitivity requires correct answers on the original and answer-changing edit. Completed runs and exact PNGs are saved in IndexedDB. Export a run to JSON to keep the images, source records, pixel evidence, model replies and scores. History supports the original chart-only reports.
+
+## Code and verification
+
+- `dist/engine.js` contains the chart pipeline, deterministic utilities and score functions.
+- `dist/skills.js` defines the skill registry, scene generators, verifiers, baseline adapters and mixed tour.
+- `dist/app.js` handles the interface, evaluation, replay and export.
+- `tests/skills.test.cjs` verifies all nine question types, the paired-image invariants and deliberate pixel changes. Run `npm install` and `npm test` for these development checks. The app itself has no installation step.
+- Run `python scripts/package.py` after changes to rebuild the offline edition and downloadable source bundle.
+- The bundled Inter font uses the SIL Open Font License in `dist/fonts/LICENSE.txt`.

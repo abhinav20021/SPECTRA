@@ -106,7 +106,7 @@
       });
       const best=Math.min(...errors);
       if(best>1000||errors.filter(v=>v===best).length!==1)throw Error('A printed region label could not be verified.');
-      return {label:REGIONS[errors.indexOf(best)],pixels:BASE-1-y};
+      return {label:REGIONS[errors.indexOf(best)],pixels:BASE-1-y,bounds:[left,y+1,right-left,BASE-1-y]};
     });
     if(new Set(readings.map(x=>x.label)).size!==4)throw Error('The rendered labels are ambiguous.');
     readings.sort((a,b)=>question==='highest'?b.pixels-a.pixels:a.pixels-b.pixels);
@@ -177,5 +177,5 @@
       style:hits.filter(h=>h[0]&&h[1]).length,change:hits.filter(h=>h[0]&&h[2]).length,pairs:items.length
     };
   }
-  window.VTF={create,specs,render,verifyImage,localAnswer,score,nextSeed,REGIONS,VARIANTS,W,H};
+  window.VTF={random,shuffled,surface,create,specs,render,verifyImage,localAnswer,score,nextSeed,REGIONS,VARIANTS,W,H};
 })();

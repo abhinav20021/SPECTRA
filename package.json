@@ -1,0 +1,6 @@
+{
+  "name": "visual-task-factory",
+  "private": true,
+  "scripts": { "test": "node tests/skills.test.cjs" },
+  "devDependencies": { "@napi-rs/canvas": "1.2.1" }
+}
