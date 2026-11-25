@@ -95,6 +95,7 @@
       encode:c=>c.toDataURL('image/png'),decode
     },measured);
     current={...sample,id:sample.id||crypto.randomUUID(),runtime:python?'Python server':'Browser',generatedAt:new Date().toISOString()};
+    window.FactoryActivity.generated(1,Object.keys(current.questions).length);
     Object.entries(current.times).forEach(([id,ms])=>measured(id,'done',ms));
     el('case-title').textContent=skills.families[family].types[task];
     el('picture').src=current.image;el('picture').alt='Fresh '+el('case-title').textContent+' task';
@@ -137,6 +138,7 @@
         result={model:config?config.name:'Local image baseline',raw,answer,correct,
           predictionMs:Math.round(t-start),scoringMs:Math.round((performance.now()-t)*100)/100};
       }
+      window.FactoryActivity.scored(1,Number(result.correct));
       attempts.push({...result,probe,evaluator,at:new Date().toISOString()});updateProbe();
       el('announce').textContent='Evaluation complete. '+(result.correct?'Correct.':'Incorrect.');
     }catch(e){

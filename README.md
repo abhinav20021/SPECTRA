@@ -4,7 +4,9 @@ Visual Task Factory generates synthetic visual questions, validates their answer
 
 ## Live Evaluation Studio
 
-Open `dist/studio.html`, the site root, or the single-file `dist/visual-task-factory.html`. Start with the warehouse bin audit. **Generate sample** creates a new scene and question from a random seed. **Run evaluation** tests the displayed sample. **Generate & test live** performs both operations with one click. **Browse all tasks** opens the searchable library. Selecting **Auto-generate task** also varies the task type within a skill, including across batch runs.
+The site root opens the product overview. Its published KPIs come from the Qwen report. Its browser counters aggregate successful generations and scored responses in Studio and Live Demo from this version onward. Scores include both baseline and model evaluations.
+
+Open `dist/studio.html` or the single-file `dist/visual-task-factory.html` for the Studio. Start with the warehouse bin audit. **Generate sample** creates a new scene and question from a random seed. **Run evaluation** tests the displayed sample. **Generate & test live** performs both operations with one click. **Browse all tasks** opens the searchable library. Selecting **Auto-generate task** also varies the task type within a skill, including across batch runs.
 
 The Studio has seven verticals and 29 task types. Chart reading, object counting and spatial reasoning retain their nine existing types. The four additions implement the following 20 procedural tasks.
 

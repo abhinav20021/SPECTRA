@@ -59,7 +59,7 @@ function mode(view){
   if(view==='history') renderHistory();window.scrollTo(0,0);
 }
 $('navStudio').onclick=$('back').onclick=()=>mode('studio');
-document.querySelector('.brand').onclick=e=>{e.preventDefault();mode('studio');};
+if(document.querySelector('.brand').getAttribute('href')==='#studio')document.querySelector('.brand').onclick=e=>{e.preventDefault();mode('studio');};
 $('navHistory').onclick=()=>mode('history');
 function setSeed(n){comparison=false;seed=n>>>0;active=0;sceneIndex=0;guesses={};runState=null;runError='';return regenerate();}
 function draw(){
@@ -112,6 +112,13 @@ async function backendRequest(path,body,signal){
   if(!r.ok)throw Error(result.error||'Python backend returned HTTP '+r.status+'.');
   return result;
 }
+function countChallenge(c){
+  window.FactoryActivity.generated(c.tasks.length,1);
+  return c;
+}
+function browserChallenge(family,seed,task,difficulty){
+  return countChallenge(S.create(family,seed,task,difficulty));
+}
 async function backendChallenge(family,seed,task,difficulty,signal){
   const scene=await backendRequest('challenge',{family,seed,task,difficulty},signal);
   const tasks=await Promise.all(scene.variants.map(async v=>({
@@ -123,14 +130,14 @@ async function backendChallenge(family,seed,task,difficulty,signal){
 async function regenerate(){
   const task=selectedTask(family,seed,$('question').value),difficulty=$('difficulty').value;
   if(!pythonRuntime){
-    challenge=S.create(family,seed,task,difficulty);
+    challenge=browserChallenge(family,seed,task,difficulty);
     updatePipeline(challenge,'3 canvas answers agree','Ready');draw();results();return true;
   }
   lock(true);$('cancel').hidden=true;
   $('verify').disabled=guessButton.disabled=$('downloadImg').disabled=true;
   $('pipeVerify').textContent='Generating on Python server…';
   try{
-    challenge=await backendChallenge(family,seed,task,difficulty);
+    challenge=countChallenge(await backendChallenge(family,seed,task,difficulty));
     updatePipeline(challenge,'3 server PNGs checked','Ready');draw();results();return true;
   }catch(err){
     challenge=null;$('chart').getContext('2d').clearRect(0,0,E.W,E.H);
@@ -248,22 +255,25 @@ async function evaluate(tour=false){
  let done=0,phase='';
  function progress(){$('resultState').textContent='Running';$('resultState').className='state';$('resultBody').innerHTML='<div class="resultmeta">Evaluating image '+Math.min(done+1,config.size*3)+' of '+config.size*3+' · '+safe(model)+'</div><div class="progress"><span style="width:'+done/(config.size*3)*100+'%"></span></div>'; }
  try {
-  if(pythonRuntime && (!challenge?.fingerprint||challenge.family!==family||challenge.seed!==seed||challenge.question!==config.question||challenge.difficulty!==config.difficulty)){
+  const newPreview=!challenge||challenge.family!==family||challenge.seed!==seed||challenge.question!==config.question||challenge.difficulty!==config.difficulty;
+  if(pythonRuntime&&(newPreview||!challenge.fingerprint)){
     challenge=await backendChallenge(family,seed,config.question,config.difficulty,current.signal);
-  }
-  if(challenge.family!==family||challenge.seed!==seed||challenge.question!==config.question||challenge.difficulty!==config.difficulty)challenge=S.create(family,seed,config.question,config.difficulty);draw();progress();
+    if(newPreview)countChallenge(challenge);
+  }else if(newPreview)challenge=browserChallenge(family,seed,config.question,config.difficulty);
+  draw();progress();
   for(let i=0;i<config.size;i++){
    const step=plan[i];
    if(pythonRuntime){
-     const c=i===0?challenge:await backendChallenge(step.family,step.seed,step.key,config.difficulty,current.signal);
+     const c=i===0?challenge:countChallenge(await backendChallenge(step.family,step.seed,step.key,config.difficulty,current.signal));
      if(tour){challenge=c;active=0;draw();}
      progress();updatePipeline(c,'3 server PNGs checked','Testing '+model);
      const result=await backendRequest('evaluate',{family:c.family,task:c.question,seed:c.seed,difficulty:c.difficulty,
        fingerprint:c.fingerprint,evaluator:config.evaluator},current.signal);
+     window.FactoryActivity.scored(result.stats.total,result.stats.correct);
      model=result.model;items.push(result.item);groupStats.push(result.stats);done+=result.stats.total;
      continue;
    }
-   const c=i===0?challenge:S.create(step.family,step.seed,step.key,config.difficulty);
+   const c=i===0?challenge:browserChallenge(step.family,step.seed,step.key,config.difficulty);
    const item={family:c.family,type:c.question,seed:c.seed,question:c.prompt,keys:[],answers:[],images:[],evidence:[]};
    for(const [variant,t] of c.tasks.entries()){
     phase=S.families[c.family].name+' · '+t.variant;
@@ -280,6 +290,7 @@ async function evaluate(tour=false){
       else response=await remoteAnswer(image,c,settings,current.signal);
     }finally{decoded.width=1;}
     current.signal.throwIfAborted();response.latencyMs=Math.round(performance.now()-started);
+    window.FactoryActivity.scored(1,Number(response.answer===t.key));
     item.answers.push(response);item.keys.push(t.key);item.images.push(image);
     item.evidence.push({pngVerified:true,variant:t.variant,source:t.rows,pixels:t.check.readings,pixelAnswer:t.check.answer});
     done++;
