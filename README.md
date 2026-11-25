@@ -21,6 +21,16 @@ The source solver and the raster reader must agree on each image. During evaluat
 
 The frieze and wallpaper tasks cover translation-only and half-turn groups with aligned periodic strips and patches. The shape counting task enumerates all squares or all axis-aligned rectangles within a composite grid. These are original implementations of task types described by SPHINX. [SPHINX project and paper](https://maveryn.github.io/sphinx/)
 
+### Run the Studio with the Python backend
+
+From the extracted source, run `npm ci` (Node.js 22+) followed by `python3 backend/server.py` (Python 3.9+). Open <http://127.0.0.1:8765/studio.html>. The evaluator selector identifies the Python server. The hosted static and single-file editions run in the browser.
+
+Python serves the UI, handles generation and inference requests, checks the three reference answers, and scores each prediction and pair. It uses the same JavaScript task definitions, Canvas renderer, PNG reader and optional local image baseline as the existing framework. Each generation returns a fingerprint of the prompt and three exact PNGs. Evaluation requires that fingerprint and repeats the check before contacting a provider.
+
+For live inference set `VTF_MODEL` to the provider's model ID before starting the server. Set `OPENAI_API_KEY` for OpenAI or override `OPENAI_BASE_URL` for a compatible provider such as local llama.cpp. Select **Python server · configured vision model**. Only the question, output format and one image are included in each of three independent requests. The key stays on the server.
+
+For automation, `GET /api/tasks` lists the 29 Studio tasks. POST JSON to `/api/challenge` with `family`, `task`, optional integer `seed`, and optional `difficulty` (`standard` or `close`). POST the returned family, task, seed, difficulty and fingerprint to `/api/evaluate` with `evaluator` set to `local` or `openai`. The response includes each PNG, the raw predictions, the evidence and the three scenario scores.
+
 ### Run the new tasks from the command line
 
 ```sh

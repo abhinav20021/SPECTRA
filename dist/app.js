@@ -1,6 +1,7 @@
 (() => {
 'use strict';
 const $=id=>document.getElementById(id), E=window.VTF, S=window.VisualSkills;
+const pythonRuntime=!!document.querySelector('meta[name="vtf-runtime"][content="python"]');
 const paths={
  layout:'M3 4h18v16H3z M3 9h18 M9 9v11',history:'M3 11a9 9 0 1 1 2.6 7 M3 4v7h7 M12 7v6l4 2',book:'M3 5c4-1 6-1 9 1 3-2 5-2 9-1v14c-3-1-6-1-9 1-3-2-6-2-9-1z M12 6v14',
  shuffle:'M3 6h3c4 0 7 12 11 12h4 M17 14l4 4-4 4 M3 18h3c2 0 3-2 5-5 M14 8c1-2 2-2 4-2h3 M17 2l4 4-4 4',
@@ -60,8 +61,9 @@ function mode(view){
 $('navStudio').onclick=$('back').onclick=()=>mode('studio');
 document.querySelector('.brand').onclick=e=>{e.preventDefault();mode('studio');};
 $('navHistory').onclick=()=>mode('history');
-function setSeed(n){comparison=false;seed=n>>>0;active=0;sceneIndex=0;guesses={};runState=null;runError='';regenerate();}
+function setSeed(n){comparison=false;seed=n>>>0;active=0;sceneIndex=0;guesses={};runState=null;runError='';return regenerate();}
 function draw(){
+  if(!challenge)return;
   const t=challenge.tasks[active],c=$('chart');c.getContext('2d').drawImage(t.canvas,0,0);
   const def=S.families[challenge.family];
   c.setAttribute('aria-label',t.variant+' image for '+def.name+'. Measurements are available under Inspect checks.');
@@ -100,12 +102,42 @@ function updatePipeline(c,verified,score){
   $('pipeVerify').textContent=verified;
   $('pipeScore').textContent=score;
 }
-function regenerate(){
-  challenge=S.create(family,seed,selectedTask(family,seed,$('question').value),$('difficulty').value);
-  updatePipeline(challenge,'3 canvas answers agree','Ready');draw();results();
+async function backendRequest(path,body,signal){
+  const r=await fetch('/api/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal});
+  const result=await r.json();
+  if(!r.ok)throw Error(result.error||'Python backend returned HTTP '+r.status+'.');
+  return result;
+}
+async function backendChallenge(family,seed,task,difficulty,signal){
+  const scene=await backendRequest('challenge',{family,seed,task,difficulty},signal);
+  const tasks=await Promise.all(scene.variants.map(async v=>({
+    variant:v.variant,key:v.key,rows:v.evidence.source,canvas:await loadPng(v.image),
+    check:{answer:v.evidence.pixelAnswer,readings:v.evidence.pixels}
+  })));
+  return {family,seed,question:task,difficulty,prompt:scene.question,choices:scene.choices,fingerprint:scene.fingerprint,tasks};
+}
+async function regenerate(){
+  const task=selectedTask(family,seed,$('question').value),difficulty=$('difficulty').value;
+  if(!pythonRuntime){
+    challenge=S.create(family,seed,task,difficulty);
+    updatePipeline(challenge,'3 canvas answers agree','Ready');draw();results();return true;
+  }
+  lock(true);$('cancel').hidden=true;
+  $('verify').disabled=guessButton.disabled=$('downloadImg').disabled=true;
+  $('pipeVerify').textContent='Generating on Python server…';
+  try{
+    challenge=await backendChallenge(family,seed,task,difficulty);
+    updatePipeline(challenge,'3 server PNGs checked','Ready');draw();results();return true;
+  }catch(err){
+    challenge=null;$('chart').getContext('2d').clearRect(0,0,E.W,E.H);
+    $('questionText').textContent='';$('pipeVerify').textContent='Generation failed';runError=err.message;results();return false;
+  }finally{lock(false);$('verify').disabled=guessButton.disabled=$('downloadImg').disabled=!challenge;}
 }
 document.querySelectorAll('.variant').forEach((b,i)=>b.onclick=()=>{active=i;if(!i)comparison=false;draw();});
-$('generate').onclick=()=>{const a=new Uint32Array(1);crypto.getRandomValues(a);setSeed(a[0]);$('live').textContent='New verified challenge generated.';};
+function newSample(){
+  const a=new Uint32Array(1);crypto.getRandomValues(a);return setSeed(a[0]);
+}
+$('generate').onclick=async()=>{if(await newSample())$('live').textContent='New verified challenge generated.';};
 $('seedEdit').onclick=()=>{showDialog('Replay a challenge','<form id="seedForm"><label for="seedInput">Challenge seed</label><input id="seedInput" required inputmode="numeric" pattern="[0-9]{1,10}" maxlength="10" value="'+seed+'"><p class="fieldnote">Use the same skill, seed, question type and difficulty to reproduce a challenge.</p><div class="dialogbuttons"><button class="btn primary">Load challenge</button></div></form>');
  $('seedForm').onsubmit=e=>{e.preventDefault();const n=Number($('seedInput').value);if(!Number.isInteger(n)||n<0||n>4294967295){$('seedInput').setCustomValidity('Enter a whole number from 0 to 4294967295.');$('seedInput').reportValidity();return;}$('dialog').close();setSeed(n);};$('seedInput').oninput=()=>$('seedInput').setCustomValidity('');};
 function saveFile(href,name){const a=document.createElement('a');a.href=href;a.download=name;document.body.append(a);a.click();a.remove();}
@@ -160,7 +192,7 @@ $('library').onclick=()=>{
 function updateConfig(){
  const remote=$('model').value==='openai',n=Number($('size').value)*3;
  $('tourLabel').textContent=remote?'All skills · '+skillCount*3+' requests':'Run all '+skillCount+' skills';
- $('remoteControls').hidden=!remote;$('runSummary').textContent=remote?n+' images · '+n+' API requests':n+' images per run';
+ $('remoteControls').hidden=!remote||pythonRuntime;$('runSummary').textContent=remote?n+' images · '+n+' API requests':n+' images per run';
 }
 $('model').onchange=$('size').onchange=updateConfig;
 $('question').onchange=$('difficulty').onchange=()=>setSeed(seed);
@@ -202,17 +234,31 @@ async function remoteAnswer(image,c,settings,signal) {
 }
 async function evaluate(tour=false){
  const config={seed,family,mode:tour?'tour':'single',question:selectedTask(family,seed,$('question').value),taskMode:$('question').value,difficulty:$('difficulty').value,size:tour?skillCount:Number($('size').value),batchSize:Number($('size').value),evaluator:$('model').value};
- let settings={};if(config.evaluator==='openai')try{settings=apiSettings();config.endpoint=settings.endpoint;}catch(err){note(err.message);return;}
+ let settings={};if(!pythonRuntime&&config.evaluator==='openai')try{settings=apiSettings();config.endpoint=settings.endpoint;}catch(err){note(err.message);return;}
  const current=new AbortController();control=current;lock(true);runError='';runState=null;sceneIndex=0;active=0;
  const plan=tour?S.tourPlan(seed,family,config.question):Array.from({length:config.size},(_,i)=>({family,seed:E.nextSeed(seed,i),key:selectedTask(family,E.nextSeed(seed,i),config.taskMode)}));
  comparison=false;
- const model=config.evaluator==='openai'?settings.name:'Local image baseline',items=[];
+ let model=config.evaluator==='openai'?(pythonRuntime?'Server vision model':settings.name):'Local image baseline';
+ const items=[],groupStats=[];
+ if(pythonRuntime)config.runtime='python';
  let done=0,phase='';
  function progress(){$('resultState').textContent='Running';$('resultState').className='state';$('resultBody').innerHTML='<div class="resultmeta">Evaluating image '+Math.min(done+1,config.size*3)+' of '+config.size*3+' · '+safe(model)+'</div><div class="progress"><span style="width:'+done/(config.size*3)*100+'%"></span></div>'; }
  try {
+  if(pythonRuntime && (!challenge?.fingerprint||challenge.family!==family||challenge.seed!==seed||challenge.question!==config.question||challenge.difficulty!==config.difficulty)){
+    challenge=await backendChallenge(family,seed,config.question,config.difficulty,current.signal);
+  }
   if(challenge.family!==family||challenge.seed!==seed||challenge.question!==config.question||challenge.difficulty!==config.difficulty)challenge=S.create(family,seed,config.question,config.difficulty);draw();progress();
   for(let i=0;i<config.size;i++){
    const step=plan[i];
+   if(pythonRuntime){
+     const c=i===0?challenge:await backendChallenge(step.family,step.seed,step.key,config.difficulty,current.signal);
+     if(tour){challenge=c;active=0;draw();}
+     progress();updatePipeline(c,'3 server PNGs checked','Testing '+model);
+     const result=await backendRequest('evaluate',{family:c.family,task:c.question,seed:c.seed,difficulty:c.difficulty,
+       fingerprint:c.fingerprint,evaluator:config.evaluator},current.signal);
+     model=result.model;items.push(result.item);groupStats.push(result.stats);done+=result.stats.total;
+     continue;
+   }
    const c=i===0?challenge:S.create(step.family,step.seed,step.key,config.difficulty);
    const item={family:c.family,type:c.question,seed:c.seed,question:c.prompt,keys:[],answers:[],images:[],evidence:[]};
    for(const [variant,t] of c.tasks.entries()){
@@ -236,17 +282,19 @@ async function evaluate(tour=false){
    }
    items.push(item);
   }
-  const record={version:3,id:crypto.randomUUID(),time:Date.now(),config,model,items,stats:E.score(items),skills:S.skillScores(items)};
+  const stats=pythonRuntime?Object.fromEntries(Object.keys(groupStats[0]).map(key=>[key,groupStats.reduce((sum,g)=>sum+g[key],0)])):E.score(items);
+  const record={version:3,id:crypto.randomUUID(),time:Date.now(),config,model,items,stats,skills:S.skillScores(items)};
   await remember(record);runState=record;
   inspect(0,tour);$('live').textContent='Evaluation complete. '+record.stats.correct+' of '+record.stats.total+' correct.';
   (tour?document.querySelector('.preview'):$('results')).scrollIntoView({behavior:'smooth',block:tour?'center':'nearest'});
  }catch(err){
-  if(tour){challenge=S.create(config.family,config.seed,config.question,config.difficulty);active=0;draw();}
-  runError=current.signal.aborted?'Run canceled after '+done+' of '+config.size*3+' images.':('Run stopped after '+done+' of '+config.size*3+' images. '+(err.message||'Request failed.'));results();updatePipeline(challenge,done+' / '+(config.size*3)+' images scored','Incomplete');$('live').textContent=runError;}
+  if(tour&&!pythonRuntime){challenge=S.create(config.family,config.seed,config.question,config.difficulty);active=0;draw();}
+  runError=current.signal.aborted?'Run canceled after '+done+' of '+config.size*3+' images.':('Run stopped after '+done+' of '+config.size*3+' images. '+(err.message||'Request failed.'));results();if(challenge)updatePipeline(challenge,done+' / '+(config.size*3)+' images scored','Incomplete');$('live').textContent=runError;}
  finally{control=null;lock(false);}
 }
-$('freshRun').onclick=()=>{if($('model').value==='openai')try{apiSettings();}catch(e){note(e.message);return;}
- $('generate').click();return evaluate(false);
+$('freshRun').onclick=async()=>{if(!pythonRuntime&&$('model').value==='openai')try{apiSettings();}catch(e){note(e.message);return;}
+ if(!pythonRuntime){newSample();return evaluate(false);}
+ if(await newSample())return evaluate(false);
 };
 $('run').onclick=()=>evaluate(false);$('tour').onclick=()=>evaluate(true);$('cancel').onclick=()=>control?.abort();
 function metrics(s){
@@ -337,5 +385,9 @@ const initialFamily=Object.hasOwn(S.families,initial.get('skill'))?initial.get('
 const initialTask=initial.get('task')||(initialFamily==='quantities'?'recolor':'auto');
 selectFamily(initialFamily,initialTask);if(initial.get('difficulty')==='close')$('difficulty').value='close';
 if(initial.has('seed')&&/^\d{1,10}$/.test(initial.get('seed'))&&Number(initial.get('seed'))<=4294967295)seed=Number(initial.get('seed'));
+if(pythonRuntime){
+  $('model').options[0].textContent='Python server · local image baseline';
+  $('model').options[1].textContent='Python server · configured vision model';
+}
 updateConfig();regenerate();
 })();

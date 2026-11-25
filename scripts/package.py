@@ -25,10 +25,10 @@ html = html.replace("</html>", "<!-- Bundled font license\n" + license_text + "\
 
 archive = dist / "visual-task-factory-source.zip"
 sources = [root / name for name in ("README.md", "package.json", "package-lock.json", ".gitignore")]
-for directory in ("framework", "adapters", "suites", "scripts", "tests", ".github/workflows"):
+for directory in ("backend", "framework", "adapters", "suites", "scripts", "tests", ".github/workflows"):
     sources.extend(sorted((root / directory).rglob("*")))
 with ZipFile(archive, "w", ZIP_DEFLATED) as z:
     for p in [*sorted(dist.rglob("*")), *sources]:
-        if p.is_file() and p != archive:
+        if p.is_file() and p != archive and "__pycache__" not in p.parts:
             z.write(p, p.relative_to(root))
 
