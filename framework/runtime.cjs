@@ -14,8 +14,12 @@ const studio = {VTF_RENDER_FONT:'"VTF Benchmark"'};
 const document = {createElement: () => createCanvas(1,1)};
 const sources = ['engine.js','skills.js'].map(file => fs.readFileSync(path.join(dist,file),'utf8'));
 for (const source of sources) vm.compileFunction(source,['window','document'])(studio,document);
-const engine = studio.VTF, skills = studio.VisualSkills;
+const panelSources = ['panel-scene.js','panel-inspection.js'].map(file => fs.readFileSync(path.join(dist,file),'utf8'));
+for (const source of panelSources) vm.compileFunction(source,['window','document'])(studio,document);
+const engine = studio.VTF, skills = studio.PanelInspection.register(studio.VisualSkills);
 const generatorVersion = hash(JSON.stringify([sources,hash(font),require('@napi-rs/canvas/package.json').version]));
+const panelVersion = hash(JSON.stringify([generatorVersion,...panelSources]));
+const revisionFor = families => families.some(f=>Object.hasOwn(studio.PanelScene.families,f)) ? panelVersion : generatorVersion;
 async function decode(png) {
   // Check IHDR before allocating the decoding surface.
   ensure(png.length >= 24 && png.subarray(0,8).equals(Buffer.from('89504e470d0a1a0a','hex')) &&
@@ -25,4 +29,4 @@ async function decode(png) {
   canvas.getContext('2d').drawImage(img,0,0);
   return canvas;
 }
-module.exports = {skills,engine,generatorVersion,decode};
+module.exports = {skills,engine,generatorVersion,revisionFor,decode};

@@ -1,10 +1,25 @@
 'use strict';
 const {ensure}=require('./core.cjs');
 const {skills}=require('./runtime.cjs');
+function inspectionRisk(rows) {
+  const panel=rows.filter(r=>r.family.startsWith('panel_'));
+  if(!panel.length)return null;
+  let defective=0, conforming=0, falseClear=0, falseAlarm=0, abstained=0;
+  for(const row of panel){
+    const required=row.family==='panel_pins'?'4':'Yes';
+    const good=row.expected===required;
+    if(good)conforming++;else defective++;
+    if(row.answer===null){abstained++;continue;}
+    if(!good&&row.answer===required)falseClear++;
+    if(good&&row.answer!==required)falseAlarm++;
+  }
+  return {defective,conforming,falseClear,falseAlarm,abstained};
+}
 const PROTOCOL='vtf-exact-label-pairs/1';
 
 function normalize(raw,family) {
   const token=raw.trim().replace(/^[\s"'*`]+|[\s"'*`.!]+$/g,'').toLowerCase();
+  if(family==='panel_pins')return /^[0-6]$/.test(token)?token:null;
   if(family==='counting')return /^\d{1,3}$/.test(token)?String(Number(token)):null;
   return skills.families[family].choices.find(label=>label.toLowerCase()===token)||null;
 }
@@ -42,7 +57,7 @@ function reportFor(manifest,adapter,responses,tasks,labels,gates){
   return {format:'vtf-report/1',scoring:PROTOCOL,suite:manifest.suite.name,dataset:manifest.fingerprint,adapter,
     status:overall.coverage<1?'incomplete':checks.every(c=>c.passed)?'passed':'failed',
     overall,byFamily,byQuestion:slices(results,'questionType'),byDifficulty:slices(results,'difficulty'),
-    byVariant:slices(results,'variant'),checks,results};
+    byVariant:slices(results,'variant'),inspectionRisk:inspectionRisk(results),checks,results};
 }
 function comparison(base,candidate,maxDrop){
   ensure(base.format==='vtf-report/1' && candidate.format===base.format &&

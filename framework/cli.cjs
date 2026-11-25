@@ -28,7 +28,8 @@ const modelFlags=['adapter','model','concurrency','retries','timeout-ms','resume
 const allowed={pipeline:['suite','out',...modelFlags],generate:['suite','out'],verify:['dataset'],
   evaluate:['dataset','out',...modelFlags],score:['dataset','predictions','model','out'],compare:['baseline','candidate','max-drop','out']};
 function showReport(r,out){
-  console.log(r.status.toUpperCase()+' · '+r.overall.correct+'/'+r.overall.total+' correct · '+percent(r.overall.coverage)+' response coverage');
+  const status=r.status==='passed'&&!r.checks.length?'completed':r.status;
+  console.log(status.toUpperCase()+' · '+r.overall.correct+'/'+r.overall.total+' correct · '+percent(r.overall.coverage)+' response coverage');
   for(const [name,g] of Object.entries(r.byFamily))console.log('  '+name+': '+g.correct+'/'+g.total+' correct, '+g.styleCorrect+'/'+g.pairs+' restyled pairs, '+g.changeCorrect+'/'+g.pairs+' edited pairs');
   console.log('Report: '+path.resolve(out,'report.html'));
   return r.status==='incomplete'?2:r.status==='failed'?1:0;

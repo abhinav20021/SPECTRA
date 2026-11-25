@@ -1,6 +1,6 @@
 'use strict';
 const {fs,path,hash,ensure,readJSON,exists,atomic,writeJSON,exclusive}=require('./core.cjs');
-const {skills,engine,generatorVersion,decode}=require('./runtime.cjs');
+const {skills,engine,revisionFor,decode}=require('./runtime.cjs');
 
 const FORMAT='vtf-dataset/1';
 const METRICS=['accuracy','style','change'];
@@ -64,7 +64,7 @@ async function generate(suite,out) {
       const taskText=jsonLines(tasks),labelText=jsonLines(labels);
       await atomic(path.join(staging,'public/tasks.jsonl'),taskText);
       await atomic(path.join(staging,'private/answers.jsonl'),labelText);
-      const content={format:FORMAT,generatorVersion,suite:spec,count:tasks.length,tasksHash:hash(taskText),answersHash:hash(labelText)};
+      const content={format:FORMAT,generatorVersion:revisionFor(spec.families),suite:spec,count:tasks.length,tasksHash:hash(taskText),answersHash:hash(labelText)};
       await writeJSON(path.join(staging,'dataset.json'),{...content,fingerprint:hash(JSON.stringify(content)),gates:suite.gates||{}});
       const verified=await verify(staging);
       await fs.rename(staging,out);

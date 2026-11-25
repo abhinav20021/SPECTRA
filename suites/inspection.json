@@ -1,0 +1,17 @@
+{
+  "name": "wiring-panel-inspection",
+  "seed": 416731,
+  "repeats": 1,
+  "families": [
+    "panel_seat",
+    "panel_pins",
+    "panel_mirror",
+    "panel_keys",
+    "panel_net"
+  ],
+  "difficulties": [
+    "standard",
+    "close"
+  ],
+  "gates": {}
+}

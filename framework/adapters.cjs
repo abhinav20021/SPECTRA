@@ -1,7 +1,8 @@
 'use strict';
 const {fs,path,hash,ensure}=require('./core.cjs');
-const {decode,skills,generatorVersion}=require('./runtime.cjs');
-const instruction='Return only the answer: a region label, shape name, or whole number, as appropriate.';
+const {decode,skills,revisionFor}=require('./runtime.cjs');
+const panelInstruction='Return only the answer: the requested label, Yes or No, or one whole number.';
+const legacyInstruction='Return only the answer: a region label, shape name, or whole number, as appropriate.';
 
 function httpProblem(status,retryAfter) {
   const error=new Error('Model endpoint returned HTTP '+status);
@@ -17,13 +18,14 @@ function httpProblem(status,retryAfter) {
 async function getAdapter(options={}) {
   const kind=options.adapter||'local';
   if(kind==='local')return {
-    identity:{kind,model:'local-visual-baseline',revision:generatorVersion},
+    identity:{kind,model:'local-visual-baseline',revision:revisionFor(options.families||[])},
     async predict({png,question}){
       const canvas=await decode(png);
       try{return skills.predict(canvas,question);}finally{canvas.width=1;}
     }
   };
   if(kind==='openai'){
+    const instruction=options.families?.some(f=>f.startsWith('panel_'))?panelInstruction:legacyInstruction;
     const model=options.model,apiKey=process.env.OPENAI_API_KEY;
     const base=new URL(process.env.OPENAI_BASE_URL||'https://api.openai.com/v1');
     ensure(!base.username&&!base.password&&!base.search&&!base.hash,'Use a base URL without credentials, query, or fragment.');

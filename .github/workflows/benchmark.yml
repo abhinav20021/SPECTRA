@@ -21,6 +21,13 @@ jobs:
         run: node framework/cli.cjs evaluate --dataset artifacts/frozen --out artifacts/candidate
       - name: Compare skill and pair scores with the checked-in reference
         run: node framework/cli.cjs compare --baseline dist/downloads/reference-report.json --candidate artifacts/candidate/report.json --max-drop 0.05 --out artifacts/comparison.json
+      - name: Verify the inspection benchmark and its false-clear regression
+        run: |
+          mkdir -p artifacts/panel-frozen
+          unzip -q dist/downloads/inspection/dataset.zip -d artifacts/panel-frozen
+          node framework/cli.cjs evaluate --dataset artifacts/panel-frozen --out artifacts/panel-candidate
+          node framework/cli.cjs compare --baseline dist/downloads/inspection/fixed-probe-baseline.json --candidate artifacts/panel-candidate/report.json --out artifacts/panel-comparison.json
+          node -e "const old=require('./dist/downloads/inspection/fixed-probe-baseline.json').inspectionRisk; const now=require('./artifacts/panel-candidate/report.json').inspectionRisk; if(now.falseClear>old.falseClear || now.abstained>old.abstained) process.exit(1)"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -28,3 +35,5 @@ jobs:
           path: |
             artifacts/candidate
             artifacts/comparison.json
+            artifacts/panel-candidate
+            artifacts/panel-comparison.json

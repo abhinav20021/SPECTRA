@@ -45,7 +45,7 @@ async function evaluate(dataset,out,options={}){
   ensure(Number.isInteger(concurrency)&&concurrency>=1&&concurrency<=32,'concurrency must be 1–32.');
   ensure(Number.isInteger(retries)&&retries>=0&&retries<=5,'retries must be 0–5.');
   ensure(Number.isInteger(timeoutMs)&&timeoutMs>0&&timeoutMs<=600000,'timeout-ms must be 1–600000.');
-  const data=await verify(dataset),adapter=await getAdapter(options);
+  const data=await verify(dataset),adapter=await getAdapter({...options,families:data.manifest.suite.families});
   const {manifest,tasks,labels}=data,gates=validateGates(options.gates??manifest.gates);
   ensure(Object.keys(gates).every(k=>!k.includes('.')||manifest.suite.families.includes(k.split('.')[0])),'Gate refers to an absent family.');
   const identity={dataset:manifest.fingerprint,adapter:adapter.identity,scoring:PROTOCOL};
