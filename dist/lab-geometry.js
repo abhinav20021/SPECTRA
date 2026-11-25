@@ -38,7 +38,7 @@
   define('stack',{family,name:'Stack count',title:'Overlay registration sheets',queries:stackQueries,
     make(r,q,h){const x=int(r,135,165),y=int(r,76,85);const boxes=range(3).map(i=>[x+i*76,y+i*44,x+i*76+315,y+i*44+150]);const pts=[];
       for(const k of shuffle(r,range(15*8))){const p={x:78+(k%15)*47,y:73+Math.floor(k/15)*36};if(boxes.some(b=>Math.min(Math.abs(p.x-b[0]),Math.abs(p.x-b[2]),Math.abs(p.y-b[1]),Math.abs(p.y-b[3]))<9))continue;pts.push(p);if(pts.length===(h?28:18))break;}return {boxes,pts};},
-    draw(g,s){s.boxes.forEach(([x,y,X,Y],i)=>{g.rect(x,y,X-x,Y-y,['#e3edf8','#f8e9dd','#e0f1ea'][i]);g.frame(x,y,X-x,Y-y,i+1,3);});s.pts.forEach(p=>g.dot(p.x,p.y,5,4));},
+    draw(g,s){s.boxes.forEach(([x,y,X,Y],i)=>{g.rect(x,y,X-x,Y-y,g.theme.sheets[i]);g.frame(x,y,X-x,Y-y,i+1,3);});s.pts.forEach(p=>g.dot(p.x,p.y,5,4));},
     solve:(s,q)=>String(s.pts.filter(p=>contained(p,s.boxes[q.ink-1],5)).length),
     read(v,q){const b=ext(v.blobs(boardBox,q.ink)),m=v.blobs(boardBox,4);const n=m.filter(p=>{const [x,y,w,h]=p.bounds;return x>b[0]&&x+w-1<b[2]&&y>b[1]&&y+h-1<b[3];}).length;return result(n,'Visible sheet extrema '+b.join(', ')+' enclose '+n+' complete marker outlines.');}});
   const colorLabels=['Blue','Orange','Teal'];
@@ -56,7 +56,7 @@
     read(v,q){const m=angular(v,355,201,91);return result(sortLabels(m,colorLabels,q.desc),'Angular samples by color: '+m.join(', ')+'.');}});
   define('chartmatch',{family,name:'Chart comparison',title:'Allocation cross-check',choices:letters.slice(0,3),queries:[{text:'Which bar chart, A, B or C, has the same color proportions as the pie?'},{text:'Which candidate reproduces the pie allocation when its bar heights are normalized? Answer A, B or C.'}],
     make(r,q,h){const a=shares(r,h),bars=shuffle(r,[a,[a[1],a[2],a[0]],[a[2],a[0],a[1]]]);return {a,bars,scale:int(r,17,20)};},
-    draw(g,s){pie(g,s.a,147,193,98);g.text('Reference',147,318,16,'center');s.bars.forEach((a,i)=>{const x=303+i*166;g.line(x,266,x+119,266,'#a9b2c2');a.forEach((v,j)=>g.rect(x+8+j*36,266-v*s.scale,26,v*s.scale,j+1));g.text(letters[i],x+60,303,20,'center');});},
+    draw(g,s){pie(g,s.a,147,193,98);g.text('Reference',147,318,16,'center');s.bars.forEach((a,i)=>{const x=303+i*166;g.line(x,266,x+119,266,g.theme.axis);a.forEach((v,j)=>g.rect(x+8+j*36,266-v*s.scale,26,v*s.scale,j+1));g.text(letters[i],x+60,303,20,'center');});},
     solve:s=>letters[s.bars.findIndex(b=>same(b,s.a))],
     read(v){const a=angular(v,147,193,74);const normalize=ns=>ns.map(n=>n/ns.reduce((sum,x)=>sum+x,0));const ref=normalize(a);
       const distances=range(3).map(i=>{const vals=range(3).map(j=>v.blobs([301+i*166,61,121,205],j+1)[0].bounds[3]);return normalize(vals).reduce((s,n,j)=>s+Math.abs(n-ref[j]),0);});

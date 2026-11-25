@@ -12,7 +12,7 @@
       coins.push({x,y,value:int(r,1,h?4:3)});if(coins.length===(h?18:12))break;
     }return {coins};},
     draw(g,s){for(const [i,x] of [332,477].entries()){g.g.strokeStyle=g.p[i+2];g.g.lineWidth=3;g.g.beginPath();g.g.arc(x,199,112,0,2*Math.PI);g.g.stroke();}
-      for(const c of s.coins){g.dot(c.x,c.y,15,'#e3e7ef');for(let i=0;i<c.value;i++)g.dot(c.x+(i%2)*9-4,c.y+Math.floor(i/2)*9-4,3,1);}
+      for(const c of s.coins){g.dot(c.x,c.y,15,g.theme.counter);for(let i=0;i<c.value;i++)g.dot(c.x+(i%2)*9-4,c.y+Math.floor(i/2)*9-4,3,1);}
       g.text('Left set',263,338,15,'center');g.text('Right set',536,338,15,'center');},
     solve:(s,q)=>String(s.coins.filter(c=>region(membership(c,332),membership(c,477),q.k)).reduce((a,c)=>a+c.value,0)),
     read(v,q){const circles=[2,3].map(i=>{const b=v.blobs(boardBox,i).map(o=>o.bounds);const l=Math.min(...b.map(a=>a[0])),r=Math.max(...b.map(a=>a[0]+a[2]-1));return {x:(l+r)/2,r:(r-l)/2};});
@@ -31,8 +31,8 @@
   const grid={x:181,y:78,s:34,w:13,h:7};
   function routes(r,h){const ys=shuffle(r,[1,2,3,4,5,6]).slice(0,int(r,1,h?4:3)).sort((a,b)=>a-b),xs=shuffle(r,range(12).map(i=>i+1)).slice(0,int(r,1,h?4:3)).sort((a,b)=>a-b);
     const blue=[],orange=[];ys.forEach((v,i)=>{blue.push([i%2?13:0,v],[i%2?0:13,v]);});xs.forEach((v,i)=>{orange.push([v,i%2?7:0],[v,i%2?0:7]);});return {blue,orange};}
-  function mesh(g){for(let x=0;x<=grid.w;x++)g.line(grid.x+x*34,grid.y,grid.x+x*34,grid.y+238,'#d3dae5',1);
-    for(let y=0;y<=grid.h;y++)g.line(grid.x,grid.y+y*34,grid.x+442,grid.y+y*34,'#d3dae5',1);}
+  function mesh(g){for(let x=0;x<=grid.w;x++)g.line(grid.x+x*34,grid.y,grid.x+x*34,grid.y+238,g.theme.routeGrid,1);
+    for(let y=0;y<=grid.h;y++)g.line(grid.x,grid.y+y*34,grid.x+442,grid.y+y*34,g.theme.routeGrid,1);}
   function drawRoutes(g,s){mesh(g);[s.blue,s.orange].forEach((path,i)=>path.slice(1).forEach(([x,y],j)=>{const [a,b]=path[j];g.line(grid.x+a*34,grid.y+b*34,grid.x+x*34,grid.y+y*34,i+1,5);}));}
   function vertices(path){const set=new Set();for(let i=1;i<path.length;i++){let [x,y]=path[i-1];const [X,Y]=path[i],dx=Math.sign(X-x),dy=Math.sign(Y-y);set.add(x+','+y);
     while(x!==X||y!==Y){x+=dx;y+=dy;set.add(x+','+y);}

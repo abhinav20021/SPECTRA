@@ -28,7 +28,7 @@
     make(r,q){const p=[[-24,-20],[24,-12],[-12,24+4*int(r,0,2)]],unique=int(r,0,3);
       const options=range(4).map(i=>{const valid=q.want?(i===unique):(i!==unique),f=pick(r,[.75,1,1.25]),turn=int(r,0,3),flip=pick(r,[-1,1]),stretch=valid?1:pick(r,[1.5,1.75]);
         return p.map(([x,y])=>{x*=stretch*f*flip;y*=f;for(let k=0;k<turn;k++)[x,y]=[-y,x];return [x,y];});});return {p,options};},
-    draw(g,s){[s.p,...s.options].forEach((pts,i)=>{const cx=simX[i],cy=191;pts.forEach(([x,y],j)=>{const [X,Y]=pts[(j+1)%3];g.line(cx+x,cy+y,cx+X,cy+Y,'#78869a',3);});pts.forEach(([x,y],j)=>g.dot(cx+x,cy+y,6,j+1));g.text(i?letters[i-1]:'Reference',cx,289,17,'center');});},
+    draw(g,s){[s.p,...s.options].forEach((pts,i)=>{const cx=simX[i],cy=191;pts.forEach(([x,y],j)=>{const [X,Y]=pts[(j+1)%3];g.line(cx+x,cy+y,cx+X,cy+Y,g.theme.edge,3);});pts.forEach(([x,y],j)=>g.dot(cx+x,cy+y,6,j+1));g.text(i?letters[i-1]:'Reference',cx,289,17,'center');});},
     solve:(s,q)=>uniqueIndex(s.options,m=>equivalent(s.p,m)===q.want),
     read(v,q){const pts=simX.map(cx=>[1,2,3].map(ink=>{const o=v.blobs([cx-67,118,134,145],ink)[0];return [o.x,o.y];}));
       const signature=m=>[dist(m[0],m[1]),dist(m[1],m[2]),dist(m[2],m[0])];const ref=signature(pts[0]);
@@ -37,7 +37,7 @@
   const rotationQs=[{text:'Which tile A–D comes next if the same rotation continues from panel to panel?'},{text:'Complete the rotation sequence. Which candidate A–D preserves the turn between each pair of tiles?'}];
   define('rotation',{family,name:'Sequence rotation',title:'Rotating tile sequence',choices:letters,queries:rotationQs,
     make(r){const m=motif(r),op=pick(r,ops.slice(0,3)),shown=[m];for(let i=0;i<2;i++)shown.push(transform(shown.at(-1),op));return {shown,op,options:optionSet(r,m,transform(shown[2],op))};},
-    draw(g,s){s.shown.forEach((m,i)=>tileDraw(g,m,...tileSlot(i),28));g.text('?',658,129,35,'center');g.line(44,187,775,187,'#d1d8e3');options(g,s.options);},
+    draw(g,s){s.shown.forEach((m,i)=>tileDraw(g,m,...tileSlot(i),28));g.text('?',658,129,35,'center');g.line(44,187,775,187,g.theme.divider);options(g,s.options);},
     solve:s=>uniqueIndex(s.options,m=>same(m,transform(s.shown[2],s.op))),
     read(v){const m=range(3).map(i=>tileRead(v,...tileSlot(i),28,3));const op=ops.slice(0,3).find(o=>same(transform(m[0],o),m[1])&&same(transform(m[1],o),m[2]));if(!op)throw Error('No constant rotation in the visible panels.');
       return result(uniqueIndex(readChoices(v),t=>same(t,transform(m[2],op))),'Both observed steps match '+op.toLowerCase()+'. Applied the same step to the third panel.');}});
@@ -49,7 +49,7 @@
     return {shown:seq.slice(0,3),options:shuffle(r,opts)};
   }
   function dotPanel(g,counts,i,bottom,multi){const x=43+i*190,y=bottom?208:70;g.frame(x,y,156,98);
-    counts.forEach((n,col)=>{if(multi&&col)g.line(x+col*50,y+3,x+col*50,y+95,'#d2d9e5',1);
+    counts.forEach((n,col)=>{if(multi&&col)g.line(x+col*50,y+3,x+col*50,y+95,g.theme.columnRule,1);
       for(let k=0;k<n;k++){if(multi)g.dot(x+27+col*50,y+89-k*9,3.6,col+1);else g.dot(x+19+(k%6)*23,y+18+Math.floor(k/6)*22,6,1);}});
     if(bottom)g.text(letters[i],x+78,y+122,17,'center');}
   function observeDots(v,i,bottom,multi){const box=[44+i*190,(bottom?208:70)+1,154,95];return (multi?[1,2,3]:[1]).map(k=>v.blobs(box,k).length);}

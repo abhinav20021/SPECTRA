@@ -1,7 +1,23 @@
 (() => {
   'use strict';
   const E=window.VTF, catalog={}, letters=['A','B','C','D'];
-  const palettes=[['#ffffff','#387aca','#d57538','#299a85','#9160be','#dbaa36'],['#f5f6fb','#588dd8','#e58b4e','#3aa991','#a078cc','#d5a334']];
+  const themes=[
+    {
+      inks:['#ffffff','#387aca','#d57538','#299a85','#9160be','#dbaa36'],
+      text:'#394052',frame:'#c5ccda',rule:'#d7dbe4',tileGrid:'#e5e9f0',cellInset:1,
+      counter:'#e3e7ef',routeGrid:'#d3dae5',axis:'#a9b2c2',edge:'#78869a',
+      divider:'#d1d8e3',columnRule:'#d2d9e5',sheets:['#e3edf8','#f8e9dd','#e0f1ea']
+    },
+    {
+      inks:['#142438','#72c9ff','#ffb46e','#52dcb5','#cda4ff','#ffdc76'],
+      text:'#edf4ff',frame:'#95a9bd',rule:'#687e94',tileGrid:'#586e83',cellInset:2,
+      counter:'#3a5066',routeGrid:'#71869b',axis:'#9eafc0',edge:'#b8cadc',
+      divider:'#768da3',columnRule:'#768da3',sheets:['#284057','#493a35','#244741']
+    }
+  ];
+  const palettes=themes.map(theme=>theme.inks);
+  // Older exported PNGs use this lighter restyle and still need pixel verification.
+  const archivedPalette=['#f5f6fb','#588dd8','#e58b4e','#3aa991','#a078cc','#d5a334'];
   const names=['','blue','orange','teal','violet','gold'];
   const range=n=>Array.from({length:n},(_,i)=>i);
   const int=(r,a,b)=>a+Math.floor(r()*(b-a+1));
@@ -9,18 +25,18 @@
   const shuffle=(r,a)=>E.shuffled(a,r);
   const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
   const mapped=new Map();
-  for(const p of palettes)p.forEach((v,i)=>mapped.set(parseInt(v.slice(1),16),i));
+  for(const p of [...palettes,archivedPalette])p.forEach((v,i)=>mapped.set(parseInt(v.slice(1),16),i));
   function painter(style,title,serial) {
-    const c=E.surface(E.W,E.H),g=c.getContext('2d',{willReadFrequently:true}),p=palettes[style];
+    const c=E.surface(E.W,E.H),g=c.getContext('2d',{willReadFrequently:true}),theme=themes[style],p=theme.inks;
     const color=v=>typeof v==='number'?p[v]:v;
     const rect=(x,y,w,h,v)=>{g.fillStyle=color(v);g.fillRect(x,y,w,h);};
     const line=(x,y,X,Y,v,w=2)=>{g.beginPath();g.strokeStyle=color(v);g.lineWidth=w;g.moveTo(x,y);g.lineTo(X,Y);g.stroke();};
     const dot=(x,y,r,v)=>{g.fillStyle=color(v);g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.fill();};
-    const text=(v,x,y,size=15,align='left')=>{g.fillStyle='#394052';g.font='600 '+size+'px '+(window.VTF_RENDER_FONT||'Arial, sans-serif');g.textAlign=align;g.fillText(String(v),x,y);g.textAlign='left';};
-    const frame=(x,y,w,h,col='#c5ccda',weight=2)=>{g.strokeStyle=color(col);g.lineWidth=weight;g.strokeRect(x,y,w,h);};
+    const text=(v,x,y,size=15,align='left')=>{g.fillStyle=theme.text;g.font='600 '+size+'px '+(window.VTF_RENDER_FONT||'Arial, sans-serif');g.textAlign=align;g.fillText(String(v),x,y);g.textAlign='left';};
+    const frame=(x,y,w,h,col=theme.frame,weight=2)=>{g.strokeStyle=color(col);g.lineWidth=weight;g.strokeRect(x,y,w,h);};
     const poly=(pts,v)=>{g.fillStyle=color(v);g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill();};
-    rect(0,0,820,356,0);text(title,27,32,21);text('FRAME '+serial,791,31,14,'right');line(26,49,794,49,'#d7dbe4',1);
-    return {c,g,p,rect,line,dot,text,frame,poly};
+    rect(0,0,820,356,0);text(title,27,32,21);text('FRAME '+serial,791,31,14,'right');line(26,49,794,49,theme.rule,1);
+    return {c,g,p,theme,rect,line,dot,text,frame,poly};
   }
   function pixels(canvas) {
     const w=canvas.width,h=canvas.height,data=canvas.getContext('2d',{willReadFrequently:true}).getImageData(0,0,w,h).data;
@@ -44,9 +60,9 @@
   const define=(id,def)=>{catalog[id]={id,...def};};
   const matrix=(n,fn)=>range(n).map(y=>range(n).map(x=>fn(x,y)));
   function tileDraw(g,m,x,y,s){
-    const h=m.length,w=m[0].length;
-    g.rect(x,y,w*s,h*s,'#e5e9f0');
-    m.forEach((row,j)=>row.forEach((v,i)=>g.rect(x+i*s+1,y+j*s+1,s-2,s-2,v||0)));
+    const h=m.length,w=m[0].length,inset=g.theme.cellInset;
+    g.rect(x,y,w*s,h*s,g.theme.tileGrid);
+    m.forEach((row,j)=>row.forEach((v,i)=>g.rect(x+i*s+inset,y+j*s+inset,s-2*inset,s-2*inset,v||0)));
   }
   const tileRead=(v,x,y,s,n,cols=n)=>range(n).map(j=>range(cols).map(i=>v.at(x+(i+.5)*s,y+(j+.5)*s)));
   function transform(m,op){

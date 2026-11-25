@@ -28,7 +28,7 @@
     stamps:range(4).map(()=>{const pts=shuffle(r,[1,2,3]);const m=matrix(5,()=>0);m[1][1]=pts[0];m[1][2]=pts[1];m[3][1]=pts[2];return transform(m,pick(r,['Identity',...ops]));}),phase:range(4).map(()=>int(r,0,1))};}
   function dimensions(wall,i){return wall?{x:84+399*(i%2),y:76+141*Math.floor(i/2),nx:8,ny:3,step:7}:{x:108,y:75+68*i,nx:12,ny:1,step:10};}
   function paintRepeat(g,s,wall){for(let i=0;i<4;i++){const {x,y,nx,ny,step}=dimensions(wall,i),width=5*nx*step,height=5*ny*step;
-      g.frame(x-3,y-3,width+6,height+6,'#d7dbe4',1);g.text(letters[i],x-26,y+height/2+6,18,'center');
+      g.frame(x-3,y-3,width+6,height+6,g.theme.rule,1);g.text(letters[i],x-26,y+height/2+6,18,'center');
       for(let ty=0;ty<ny;ty++)for(let tx=0;tx<nx;tx++){const flip=s.modes[i]&&(tx+ty+s.phase[i])%2;const m=flip?transform(s.stamps[i],'Half turn'):s.stamps[i];
         m.forEach((row,j)=>row.forEach((ink,k)=>{if(ink)g.rect(x+(tx*5+k)*step+1,y+(ty*5+j)*step+1,step-2,step-2,ink);}));}
     }}

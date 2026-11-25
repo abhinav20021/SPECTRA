@@ -51,3 +51,23 @@ test('raster readers distinguish the edited answer across all task types and kee
   assert.equal(normalize('A B C','geometry','sorting'),'A B C');
   assert.equal(normalize('41','patterns','wallpaper'),null);
 });
+
+test('restyling changes the visible task marks in every reasoning task', () => {
+  for (const [family,definition] of Object.entries(skills.labFamilies)) {
+    for (const task of Object.keys(definition.types)) {
+      const scene=skills.create(family,82041,task,'standard');
+      const [original,restyled]=scene.tasks.map(t=>t.canvas);
+      const data=canvas=>canvas.getContext('2d').getImageData(24,56,772,277).data;
+      const a=data(original),b=data(restyled);
+      let colored=0,changed=0;
+      // Exclude the background, text and frame so a theme change must also affect the puzzle.
+      for(let i=0;i<a.length;i+=4){
+        if(Math.max(a[i],a[i+1],a[i+2])-Math.min(a[i],a[i+1],a[i+2])<=55)continue;
+        colored++;
+        if(Math.max(Math.abs(a[i]-b[i]),Math.abs(a[i+1]-b[i+1]),Math.abs(a[i+2]-b[i+2]))>=48)changed++;
+      }
+      assert.ok(colored>0 && changed/colored>0.7,task+' needs a visible restyle of the colored marks');
+      scene.tasks.forEach(t=>t.canvas.width=1);
+    }
+  }
+});
