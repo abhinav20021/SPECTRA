@@ -1,6 +1,12 @@
 {
   "name": "visual-task-factory",
+  "version": "1.0.0",
   "private": true,
-  "scripts": { "test": "node tests/skills.test.cjs" },
-  "devDependencies": { "@napi-rs/canvas": "1.2.1" }
+  "engines": {"node": ">=22"},
+  "bin": {"vtf": "framework/cli.cjs"},
+  "scripts": {
+    "test": "node tests/skills.test.cjs && node --test tests/framework.test.cjs",
+    "benchmark": "node framework/cli.cjs pipeline"
+  },
+  "dependencies": {"@napi-rs/canvas": "1.2.1", "proper-lockfile": "4.1.2"}
 }

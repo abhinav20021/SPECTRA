@@ -4,7 +4,8 @@
   const VARIANTS = ['Original', 'Restyled', 'Value swap'];
   const W = 820, H = 356, BASE = 285, TOP = 56;
   const SLOTS = [171, 352, 533, 714];
-  const LABEL_FONT = '500 20px Arial, sans-serif';
+  const font=window.VTF_RENDER_FONT||'Arial, sans-serif';
+  const LABEL_FONT='500 20px '+font;
   const palettes = [
     ['#8060df','#66b4a4','#e7a06d','#7399d1'],
     ['#4787a2','#c578aa','#628e6d','#c69851'],
@@ -53,11 +54,11 @@
   function render(spec) {
     const c=surface(W,H),ctx=c.getContext('2d',{willReadFrequently:true});
     ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#30313d';ctx.font='600 19px Arial, sans-serif';
+    ctx.fillStyle='#30313d';ctx.font='600 19px '+font;
     ctx.fillText('Sales by region',26,31);
-    ctx.fillStyle='#686879';ctx.font='13px monospace';ctx.textAlign='right';
+    ctx.fillStyle='#686879';ctx.font='13px '+(window.VTF_RENDER_FONT||'monospace');ctx.textAlign='right';
     ctx.fillText('UNITS',W-27,30);
-    ctx.font='16px Arial, sans-serif';
+    ctx.font='16px '+font;
     for(let tick=0;tick<=100;tick+=25) {
       const y=Math.round(BASE-tick*(BASE-TOP)/100);
       ctx.strokeStyle=tick===0?'#aaa9b4':'#dedee6';
@@ -113,13 +114,19 @@
     if(readings[0].pixels===readings[1].pixels)throw Error('The rendered answer is tied.');
     return {answer:readings[0].label,readings};
   }
+  function chartKey(rows,question){
+    const values=rows.map(row=>row.value);
+    const target=(question==='highest'?Math.max:Math.min)(...values);
+    const matches=rows.filter(row=>row.value===target);
+    if(matches.length!==1)throw Error('Ambiguous source values.');
+    return matches[0].label;
+  }
+  function chartPrompt(question){return 'Which region recorded the '+question+' sales?';}
   function create(seed,question='highest',difficulty='standard'){
-    const prompt='Which region recorded the '+question+' sales?';
+    const prompt=chartPrompt(question);
     const tasks=specs(seed,question,difficulty).map((spec,i)=>{
       const canvas=render(spec);
-      const values=spec.rows.map(row=>row.value);
-      const target=(question==='highest'?Math.max:Math.min)(...values);
-      const key=spec.rows.find(row=>row.value===target).label;
+      const key=chartKey(spec.rows,question);
       const check=verifyImage(canvas,question);
       if(check.answer!==key)throw Error('The source table and rendered image disagree.');
       return {variant:VARIANTS[i],canvas,key,check,rows:spec.rows};
@@ -177,5 +184,5 @@
       style:hits.filter(h=>h[0]&&h[1]).length,change:hits.filter(h=>h[0]&&h[2]).length,pairs:items.length
     };
   }
-  window.VTF={random,shuffled,surface,create,specs,render,verifyImage,localAnswer,score,nextSeed,REGIONS,VARIANTS,W,H};
+  window.VTF={chartKey,chartPrompt,random,shuffled,surface,create,specs,render,verifyImage,localAnswer,score,nextSeed,REGIONS,VARIANTS,W,H};
 })();

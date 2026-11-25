@@ -85,7 +85,7 @@
   function paint(rows,family,style){
     const c=E.surface(E.W,E.H),g=c.getContext('2d',{willReadFrequently:true});
     g.fillStyle=style?'#f7f7f7':'#fcfcfc';g.fillRect(0,0,c.width,c.height);
-    g.fillStyle='#34343d';g.font='600 19px Arial, sans-serif';g.fillText(family==='counting'?'Object collection':'Spatial arrangement',25,32);
+    g.fillStyle='#34343d';g.font='600 19px '+(window.VTF_RENDER_FONT||'Arial, sans-serif');g.fillText(family==='counting'?'Object collection':'Spatial arrangement',25,32);
     g.strokeStyle='#dedee3';g.lineWidth=1;g.beginPath();g.moveTo(25,48.5);g.lineTo(795,48.5);g.stroke();
     if(family==='spatial'){
       g.setLineDash([3,7]);g.strokeStyle='#d8d8dd';g.beginPath();g.moveTo(410,59);g.lineTo(410,337);g.moveTo(76,190);g.lineTo(744,190);g.stroke();g.setLineDash([]);
@@ -187,6 +187,15 @@
     const candidate=objects.find(o=>o!==anchor&&sideOf(o,anchor)===key);
     return candidate?.shape||'Unresolved';
   }
+  function sourceAnswer(family,key,rows){
+    if(family==='charts')return E.chartKey(rows,key);
+    if(family==='counting')return String(rows.filter(o=>matches(o,countTargets[key])).length);
+    return rows.find(o=>o.side===key).shape;
+  }
+  function promptFor(family,key){
+    if(family==='charts')return E.chartPrompt(key);
+    return family==='counting'?countPrompts[key]:spatialPrompt(key);
+  }
   function create(family,seed,key,difficulty){
     const def=families[family];
     if(!Object.hasOwn(def.types,key))throw Error('Unknown question for this skill.');
@@ -195,13 +204,13 @@
     const scenes=family==='counting'?countScenes(rng,key,hard):spatialScenes(rng,key,hard);
     const tasks=scenes.map((rows,i)=>{
       const canvas=paint(rows,family,i===1?1:0);
-      const answer=family==='counting'?String(rows.filter(o=>matches(o,countTargets[key])).length):rows.find(o=>o.side===key).shape;
+      const answer=sourceAnswer(family,key,rows);
       const check=pixelCheck(canvas,family,key);
       if(answer!==check.answer || rows.length!==check.readings.length)throw Error('The rendered scene disagrees with its source data.');
       return {canvas,rows,key:answer,check,variant:def.variants[i]};
     });
     if(tasks[0].key!==tasks[1].key||tasks[0].key===tasks[2].key)throw Error('Invalid visual comparison.');
-    return {family,seed,question:key,difficulty,prompt:family==='counting'?countPrompts[key]:spatialPrompt(key),choices:def.choices,tasks};
+    return {family,seed,question:key,difficulty,prompt:promptFor(family,key),choices:def.choices,tasks};
   }
   function tourPlan(seed,first='charts',selected){
     const order=Object.keys(families),offset=order.indexOf(first);
@@ -216,5 +225,5 @@
       return group.length?[{family,name:def.name,...E.score(group)}]:[];
     });
   }
-  window.VisualSkills={families,create,predict,tourPlan,skillScores,pixelCheck};
+  window.VisualSkills={sourceAnswer,promptFor,families,create,predict,tourPlan,skillScores,pixelCheck};
 })();

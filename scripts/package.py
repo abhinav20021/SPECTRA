@@ -10,6 +10,7 @@ html = (dist / "index.html").read_text()
 font = b64encode((dist / "fonts/inter-latin.woff2").read_bytes()).decode()
 style = (dist / "style.css").read_text().replace("fonts/inter-latin.woff2", "data:font/woff2;base64," + font)
 html = html.replace('<link rel="stylesheet" href="style.css">', '<style>' + style + '</style>')
+html = re.sub(r'<a data-online-only[^>]*>[^<]*</a>', '', html)
 scripts = re.findall(r'<script defer src="([\w.-]+\.js)"></script>', html)
 html = re.sub(r'<script defer src="[\w.-]+\.js"></script>', "", html)
 html = re.sub(r'<a class="offlinedl"[^>]*>[^<]*</a>', "", html)
@@ -20,7 +21,9 @@ html = html.replace("</html>", "<!-- Bundled font license\n" + license_text + "\
 (dist / "visual-task-factory.html").write_text(html)
 
 archive = dist / "visual-task-factory-source.zip"
-sources = [root / "README.md", root / "package.json", Path(__file__).resolve(), *sorted((root / "tests").glob("*.cjs"))]
+sources = [root / name for name in ("README.md", "package.json", "package-lock.json", ".gitignore")]
+for directory in ("framework", "suites", "scripts", "tests", ".github/workflows"):
+    sources.extend(sorted((root / directory).rglob("*")))
 with ZipFile(archive, "w", ZIP_DEFLATED) as z:
     for p in [*sorted(dist.rglob("*")), *sources]:
         if p.is_file() and p != archive:

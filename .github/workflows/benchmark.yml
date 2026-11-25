@@ -1,0 +1,30 @@
+name: Visual benchmark
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  visual-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Unpack the frozen regression set
+        run: |
+          mkdir -p artifacts/frozen
+          unzip -q dist/downloads/sample-dataset.zip -d artifacts/frozen
+      - name: Evaluate the current local adapter
+        run: node framework/cli.cjs evaluate --dataset artifacts/frozen --out artifacts/candidate
+      - name: Compare skill and pair scores with the checked-in reference
+        run: node framework/cli.cjs compare --baseline dist/downloads/reference-report.json --candidate artifacts/candidate/report.json --max-drop 0.05 --out artifacts/comparison.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-evaluation
+          path: |
+            artifacts/candidate
+            artifacts/comparison.json
