@@ -100,12 +100,6 @@ function draw(){
   }
 }
 $('compare').onclick=()=>{comparison=!comparison;if(comparison&&!active)active=2;draw();};
-function updatePipeline(c,verified,score){
-  $('pipeScene').textContent=S.families[c.family].name+' · #'+c.seed;
-  $('pipeQuestion').textContent=S.families[c.family].types[c.question];
-  $('pipeVerify').textContent=verified;
-  $('pipeScore').textContent=score;
-}
 async function backendRequest(path,body,signal){
   const r=await fetch('/api/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal});
   const result=await r.json();
@@ -131,17 +125,16 @@ async function regenerate(){
   const task=selectedTask(family,seed,$('question').value),difficulty=$('difficulty').value;
   if(!pythonRuntime){
     challenge=browserChallenge(family,seed,task,difficulty);
-    updatePipeline(challenge,'3 canvas answers agree','Ready');draw();results();return true;
+    draw();results();return true;
   }
   lock(true);$('cancel').hidden=true;
   $('verify').disabled=guessButton.disabled=$('downloadImg').disabled=true;
-  $('pipeVerify').textContent='Generating on Python server…';
   try{
     challenge=countChallenge(await backendChallenge(family,seed,task,difficulty));
-    updatePipeline(challenge,'3 server PNGs checked','Ready');draw();results();return true;
+    draw();results();return true;
   }catch(err){
     challenge=null;$('chart').getContext('2d').clearRect(0,0,E.W,E.H);
-    $('questionText').textContent='';$('pipeVerify').textContent='Generation failed';runError=err.message;results();return false;
+    $('questionText').textContent='';runError=err.message;results();return false;
   }finally{lock(false);$('verify').disabled=guessButton.disabled=$('downloadImg').disabled=!challenge;}
 }
 document.querySelectorAll('.variant').forEach((b,i)=>b.onclick=()=>{active=i;if(!i)comparison=false;draw();});
@@ -266,7 +259,7 @@ async function evaluate(tour=false){
    if(pythonRuntime){
      const c=i===0?challenge:countChallenge(await backendChallenge(step.family,step.seed,step.key,config.difficulty,current.signal));
      if(tour){challenge=c;active=0;draw();}
-     progress();updatePipeline(c,'3 server PNGs checked','Testing '+model);
+     progress();
      const result=await backendRequest('evaluate',{family:c.family,task:c.question,seed:c.seed,difficulty:c.difficulty,
        fingerprint:c.fingerprint,evaluator:config.evaluator},current.signal);
      window.FactoryActivity.scored(result.stats.total,result.stats.correct);
@@ -285,7 +278,6 @@ async function evaluate(tour=false){
     try{
       const measured=c.family==='charts'?E.verifyImage(decoded,c.question):S.pixelCheck(decoded,c.family,c.question,c.prompt);
       if(measured.answer!==t.key||JSON.stringify(measured.readings)!==JSON.stringify(t.check.readings))throw Error('Exported PNG failed the independent check.');
-      updatePipeline(c,(done+1)+' / '+(config.size*3)+' PNGs checked','Testing '+model);
       if(config.evaluator==='local'){const raw=S.predict(decoded,c.prompt);response={raw,answer:raw};}
       else response=await remoteAnswer(image,c,settings,current.signal);
     }finally{decoded.width=1;}
@@ -304,7 +296,7 @@ async function evaluate(tour=false){
   (tour?document.querySelector('.preview'):$('results')).scrollIntoView({behavior:'smooth',block:tour?'center':'nearest'});
  }catch(err){
   if(tour&&!pythonRuntime){challenge=S.create(config.family,config.seed,config.question,config.difficulty);active=0;draw();}
-  runError=current.signal.aborted?'Run canceled after '+done+' of '+config.size*3+' images.':('Run stopped after '+done+' of '+config.size*3+' images. '+(err.message||'Request failed.'));results();if(challenge)updatePipeline(challenge,done+' / '+(config.size*3)+' images scored','Incomplete');$('live').textContent=runError;}
+  runError=current.signal.aborted?'Run canceled after '+done+' of '+config.size*3+' images.':('Run stopped after '+done+' of '+config.size*3+' images. '+(err.message||'Request failed.'));results();$('live').textContent=runError;}
  finally{control=null;lock(false);}
 }
 $('freshRun').onclick=async()=>{if(!pythonRuntime&&$('model').value==='openai')try{apiSettings();}catch(e){note(e.message);return;}
@@ -324,7 +316,7 @@ function inspect(index,compare=runState.config.mode==='tour'){
  sceneIndex=index;active=compare?2:0;comparison=compare;seed=it.seed;guesses={};
  selectFamily(skill,key);$('difficulty').value=r.config.difficulty;
  challenge=S.create(skill,seed,key,r.config.difficulty);
- updatePipeline(challenge,r.version>=3?r.stats.total+' PNGs checked':'Saved run',r.stats.correct+' / '+r.stats.total+' correct');draw();results();
+ draw();results();
  const preview=challenge;
  if(it.images?.length===3)Promise.all(it.images.map(loadPng)).then(images=>{
    if(challenge!==preview||runState!==r){images.forEach(c=>c.width=1);return;}

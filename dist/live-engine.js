@@ -15,19 +15,21 @@
     if(!Object.hasOwn(S.families,family)||!Object.hasOwn(S.families[family].types,task))throw Error('Unknown task.');
     if(family==='charts'){
       const spec=E.chartSpecs(rng,task,difficulty)[0];
-      return {rows:spec.rows,prompt:E.chartPrompt(task),draw:()=>E.render(spec)};
+      return {source:spec.rows,chartStyle:{palette:spec.palette,width:spec.width}};
     }
     if(family==='counting'||family==='spatial'){
-      const rows=S.objectScenes(family,rng,task,difficulty==='close')[0];
-      return {rows,prompt:S.promptFor(family,task),draw:()=>S.paint(rows,family,0)};
+      return {source:S.objectScenes(family,rng,task,difficulty==='close')[0]};
     }
     const d=Lab.catalog[task],query=Lab.sampleQuery(d,rng,difficulty);
-    const scene=d.make(rng,query,difficulty==='close');
-    return {rows:{scene,query},prompt:query.text,draw(){
-      const g=L.painter(0,d.title,'LIVE');
-      d.draw(g,scene,query);
-      return g.c;
-    }};
+    return {source:{scene:d.make(rng,query,difficulty==='close'),query}};
+  }
+
+  function renderImage({family,task,source,chartStyle}){
+    if(family==='charts')return E.render({rows:source,...chartStyle});
+    if(family==='counting'||family==='spatial')return S.paint(source,family,0);
+    const d=Lab.catalog[task],g=L.painter(0,d.title,'LIVE');
+    d.draw(g,source.scene,source.query);
+    return g.c;
   }
 
   function alternate(family,task,src,rng){
@@ -72,47 +74,67 @@
     return choices.find(v=>clean(raw)===clean(v))||null;
   }
 
-  async function generate(family,task,difficulty,io,notify=()=>{}){
-    const times={},rng=entropy();
-    async function stage(id,work){
-      notify(id,'running');const start=performance.now();
-      const value=await work();times[id]=Math.round((performance.now()-start)*10)/10;
-      notify(id,'done',times[id]);return value;
-    }
-    const src=await stage('scene',()=>sample(family,task,difficulty,rng));
-    const image=await stage('image',()=>{
-      const canvas=src.draw();
-      try{return io.encode(canvas);}finally{canvas.width=1;}
-    });
+  function buildQuestions({family,task,source},rng){
+    const src={rows:source,prompt:source.query?.text||S.promptFor(family,task)};
     const alt=alternate(family,task,src,rng);
-    const sourceAnswer=S.sourceAnswer(family,task,src.rows);
-    const altAnswer=alt?S.sourceAnswer(family,alt.task,alt.rows):sourceAnswer;
+    const answer=S.sourceAnswer(family,task,source);
     const allowed=id=>Lab.catalog[id]?.choices||S.families[family].choices;
-    const probes=await stage('question',()=>{
-      const direct=directQuestion(src,sourceAnswer,allowed(task),rng);
-      if(alt)return {direct,swap:{...directQuestion(alt,altAnswer,allowed(alt.task),rng),kind:'new target'}};
-      const claim=rng()<0.5?sourceAnswer:L.pick(rng,direct.choices.filter(v=>v!==sourceAnswer));
-      const swap={kind:'claim check',baseQuestion:src.prompt,claim,choices:['Yes','No'],
-        text:'A reviewer answered “'+claim+'” to this question.\n“'+src.prompt+'”\nDoes the image support that answer? Reply Yes or No.'};
-      return {direct,swap};
-    });
-    const pixels=await stage('verify',async()=>{
-      const c=await io.decode(image);
-      const read=(id,prompt)=>family==='charts'?E.verifyImage(c,id):S.pixelCheck(c,family,id,prompt);
-      try{
-        const direct=read(task,src.prompt),swap=alt?read(alt.task,alt.prompt):direct;
-        if(direct.answer!==sourceAnswer||swap.answer!==altAnswer)throw Error('The source and the delivered PNG disagree.');
-        return {direct,swap};
-      }finally{c.width=1;}
-    });
-    for(const [id,q] of Object.entries(probes)){
-      const target=id==='swap'&&alt?alt:src;
-      q.parameters=target.rows.query||{task:target.task||task};
-      q.reference=project(q,id==='direct'?sourceAnswer:altAnswer);
-      q.pixelAnswer=project(q,pixels[id].answer);
-      if(!q.choices.includes(q.reference)||q.pixelAnswer!==q.reference)throw Error('The question could not be verified.');
+    const direct=directQuestion(src,answer,allowed(task),rng);
+    direct.parameters=source.query||{task};
+    if(alt){
+      const swap=directQuestion(alt,S.sourceAnswer(family,alt.task,alt.rows),allowed(alt.task),rng);
+      return {direct,swap:{...swap,kind:'new target',parameters:alt.rows.query||{task:alt.task}}};
     }
-    return {family,task,difficulty,image,source:src.rows,questions:probes,pixels,times};
+    const claim=rng()<0.5?answer:L.pick(rng,direct.choices.filter(v=>v!==answer));
+    return {direct,swap:{kind:'claim check',baseQuestion:src.prompt,claim,choices:['Yes','No'],parameters:direct.parameters,
+      text:'A reviewer answered “'+claim+'” to this question.\n“'+src.prompt+'”\nDoes the image support that answer? Reply Yes or No.'}};
+  }
+
+  async function verify({family,task,source,questions,image},decode){
+    const canvas=await decode(image),verified={},pixels={};
+    try{
+      for(const [id,q] of Object.entries(questions)){
+        const target=source.query?task:q.parameters.task;
+        const rows=source.query?{scene:source.scene,query:q.parameters}:source;
+        const sourceAnswer=S.sourceAnswer(family,target,rows);
+        const reading=family==='charts'?E.verifyImage(canvas,target):S.pixelCheck(canvas,family,target,q.baseQuestion);
+        if(reading.answer!==sourceAnswer)throw Error('The source and the delivered PNG disagree.');
+        pixels[id]=reading;
+        const reference=project(q,sourceAnswer),pixelAnswer=project(q,reading.answer);
+        if(!q.choices.includes(reference)||pixelAnswer!==reference)throw Error('The question could not be verified.');
+        verified[id]={...q,reference,pixelAnswer};
+      }
+      return {questions:verified,pixels};
+    }finally{canvas.width=1;}
+  }
+
+  const generationStages=['scene','image','question','verify'];
+  async function advance(id,state,io){
+    const started=performance.now();
+    let patch;
+    switch(id){
+      case 'scene': patch=sample(state.family,state.task,state.difficulty,entropy()); break;
+      case 'image': {
+        const canvas=renderImage(state);
+        try{patch={image:await io.encode(canvas)};}finally{canvas.width=1;}
+        break;
+      }
+      case 'question': patch={questions:buildQuestions(state,entropy())}; break;
+      case 'verify': patch=await verify(state,io.decode); break;
+      default: throw Error('Unknown generation stage.');
+    }
+    return {patch,ms:Math.round((performance.now()-started)*10)/10};
+  }
+
+  async function generate(family,task,difficulty,io,notify=()=>{}){
+    const state={family,task,difficulty,times:{}};
+    for(const id of generationStages){
+      notify(id,'running');
+      const {patch,ms}=await advance(id,state,io);
+      Object.assign(state,patch);
+      state.times[id]=ms;notify(id,'done',ms);
+    }
+    return state;
   }
 
   async function baseline(image,probe,decode){
@@ -122,5 +144,5 @@
       return {raw:project(probe,baseAnswer)||'Unresolved',baseAnswer};
     }finally{c.width=1;}
   }
-  window.LiveLab={generate,baseline,normalize};
+  window.LiveLab={generate,advance,baseline,normalize};
 })();

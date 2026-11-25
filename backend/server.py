@@ -23,6 +23,8 @@ DIST = ROOT / 'dist'
 SLOTS = BoundedSemaphore(4)
 LIVE_CASES = OrderedDict()
 LIVE_LOCK = Lock()
+LIVE_STAGES = ('scene', 'image', 'question', 'verify')
+LIVE_PREDICTIONS = OrderedDict()
 
 
 class ServiceError(Exception):
@@ -73,30 +75,69 @@ def spec_for(data, catalog):
     return family, task, seed, difficulty
 
 
-def new_live_case(data, catalog):
+def remember(store, key, value):
+    with LIVE_LOCK:
+        store[key] = value
+        if len(store) > 64:
+            store.popitem(last=False)
+
+
+def recall(store, key):
+    with LIVE_LOCK:
+        if not isinstance(key, str) or key not in store:
+            raise ServiceError(410, 'This case or prediction expired. Start a fresh run.')
+        store.move_to_end(key)
+        return store[key]
+
+
+def live_config(data, catalog):
     if 'seed' in data:
         raise ValueError('Live cases take a task and difficulty. Omit the seed.')
     family, task, difficulty = task_for(data, catalog)
-    case = render('fresh', family=family, task=task, difficulty=difficulty)
-    case['id'] = secrets.token_urlsafe(18)
-    case['runtime'] = 'Python server'
-    with LIVE_LOCK:
-        LIVE_CASES[case['id']] = case
-        if len(LIVE_CASES) > 64:
-            LIVE_CASES.popitem(last=False)
+    return dict(family=family, task=task, difficulty=difficulty)
+
+
+def new_live_case(data, catalog):
+    case = render('fresh', **live_config(data, catalog))
+    case.update(id=secrets.token_urlsafe(18), runtime='Python server')
+    remember(LIVE_CASES, case['id'], {'case': case, 'lock': Lock(), 'steps': {}})
     return case
 
 
-def evaluate_live(data):
+def live_step(data, catalog):
+    stage = data.get('stage')
+    if stage not in LIVE_STAGES:
+        raise ValueError('Unknown generation stage.')
+    if stage == 'scene' and 'id' not in data:
+        case = live_config(data, catalog)
+        case.update(id=secrets.token_urlsafe(18), runtime='Python server', times={})
+        record = dict(case=case, lock=Lock(), steps={})
+        remember(LIVE_CASES, case['id'], record)
+    else:
+        record = recall(LIVE_CASES, data.get('id'))
+    with record['lock']:
+        case, steps = record['case'], record['steps']
+        if stage in steps:
+            return steps[stage]
+        if len(case['times']) != LIVE_STAGES.index(stage):
+            raise ServiceError(409, 'Complete the preceding stage first.')
+        result = render('fresh-step', state=case, stage=stage)
+        case.update(result['patch'])
+        case['times'][stage] = result['ms']
+        steps[stage] = dict(id=case['id'], **result)
+        return steps[stage]
+
+
+def live_prediction(data):
     case_id, which, evaluator = (data.get(k) for k in ('id', 'probe', 'evaluator'))
     if not isinstance(case_id, str) or which not in ('direct', 'swap') or evaluator not in ('local', 'openai'):
         raise ValueError('Choose a live case, question and evaluator.')
-    with LIVE_LOCK:
-        case = LIVE_CASES.get(case_id)
-        if case is None:
-            raise ServiceError(410, 'This live case expired. Generate a fresh case.')
-        LIVE_CASES.move_to_end(case_id)
-    probe = case['questions'][which]
+    record = recall(LIVE_CASES, case_id)
+    with record['lock']:
+        case = record['case']
+        if 'pixels' not in case:
+            raise ServiceError(409, 'Verify the PNG before requesting a prediction.')
+        probe = case['questions'][which]
     started = time.monotonic()
     if evaluator == 'openai':
         raw = model_answer(case['image'], probe['text'], probe['choices'])
@@ -105,12 +146,27 @@ def evaluate_live(data):
         result = render('fresh-baseline', image=case['image'],
                         probe={k: probe[k] for k in ('baseQuestion', 'claim') if k in probe})
         raw, model = result['raw'], 'Local image baseline'
-    predicted = time.monotonic()
-    answer = normalize(raw, probe['choices'], case['family'])
+    prediction = dict(id=case_id, probe=which, model=model, raw=raw,
+                      predictionMs=round(1000*(time.monotonic()-started), 1))
+    return prediction, probe, case['family']
+
+
+def score_live(prediction, probe, family):
+    started = time.monotonic()
+    answer = normalize(prediction['raw'], probe['choices'], family)
     correct = answer == probe['reference']
-    return dict(id=case_id, probe=which, model=model, raw=raw, answer=answer,
-                correct=correct, predictionMs=round(1000*(predicted-started),1),
-                scoringMs=round(1000*(time.monotonic()-predicted),2))
+    return dict(prediction, answer=answer, correct=correct, scoringMs=round(1000*(time.monotonic()-started), 2))
+
+
+def predict_step(data):
+    entry = live_prediction(data)
+    token = secrets.token_urlsafe(18)
+    remember(LIVE_PREDICTIONS, token, entry)
+    return dict(entry[0], predictionId=token)
+
+
+def evaluate_live(data):
+    return score_live(*live_prediction(data))
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -205,7 +261,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         path = urlsplit(self.path).path
-        if path not in ('/api/challenge', '/api/evaluate', '/api/live/new', '/api/live/evaluate'):
+        if path not in ('/api/challenge', '/api/evaluate', '/api/live/new', '/api/live/step', '/api/live/predict', '/api/live/score', '/api/live/evaluate'):
             return self.send_data({'error': 'Unknown endpoint.'}, status=404)
         origin = self.headers.get('Origin')
         if origin and urlsplit(origin).netloc != self.headers.get('Host'):
@@ -220,6 +276,12 @@ class Handler(SimpleHTTPRequestHandler):
             if not isinstance(data, dict):
                 raise ValueError('Expected a JSON object.')
             with SLOTS:
+                if path == '/api/live/step':
+                    return self.send_data(live_step(data, self.server.catalog))
+                if path == '/api/live/predict':
+                    return self.send_data(predict_step(data))
+                if path == '/api/live/score':
+                    return self.send_data(score_live(*recall(LIVE_PREDICTIONS, data.get('predictionId'))))
                 if path == '/api/live/new':
                     return self.send_data(new_live_case(data, self.server.catalog))
                 if path == '/api/live/evaluate':

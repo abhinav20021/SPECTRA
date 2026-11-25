@@ -11,9 +11,11 @@ async function main() {
   const { action, family, task, seed, difficulty } = input;
   if (action === 'catalog') return families;
   const decodeUrl = url => decode(Buffer.from(url.split(',')[1], 'base64'));
-  if (action === 'fresh') return live.generate(family, task, difficulty, {
+  const io = {
     encode: canvas => canvas.toDataURL('image/png'), decode: decodeUrl
-  });
+  };
+  if (action === 'fresh') return live.generate(family, task, difficulty, io);
+  if (action === 'fresh-step') return live.advance(input.stage, input.state, io);
   if (action === 'fresh-baseline') return live.baseline(input.image, input.probe, decodeUrl);
   const scene = skills.create(family, seed, task, difficulty);
   const variants = [];
