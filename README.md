@@ -21,6 +21,14 @@ The source solver and the raster reader must agree on each image. During evaluat
 
 The frieze and wallpaper tasks cover translation-only and half-turn groups with aligned periodic strips and patches. The shape counting task enumerates all squares or all axis-aligned rectangles within a composite grid. These are original implementations of task types described by SPHINX. [SPHINX project and paper](https://maveryn.github.io/sphinx/)
 
+### Live Demo
+
+Open `live.html` from the Studio navigation. Pick any of the 29 task types. **Generate only** draws a fresh case, and **Run fresh case** also tests the evaluator. The live sampler reads Web Crypto random values for its individual choices. It accepts no seed. Each task uses procedural scene rules. The question builder draws parameters and constructs response options for that particular scene.
+
+**Question swap** keeps the exact PNG. Where the drawing supports another target, it can change a region, an inspected row range, a shape filter, a direction or an ordering instruction. Other tasks generate a claim about the same puzzle and ask whether the pixels support it. Both references must agree with the measurements from decoding the final PNG. Select **Evaluate this question** for a separate prediction and **Export case** to save the image, both prompts, ground truth, pixel evidence and actual attempts.
+
+The hosted tab runs its generator and verifier in the browser. Opening the tab from `python3 backend/server.py` uses the Python API. `POST /api/live/new` accepts family, task and difficulty and returns the sampled case. `POST /api/live/evaluate` accepts its ID, probe (`direct` or `swap`), and evaluator (`local` or `openai`). The server holds the latest 64 live cases in memory and evaluates the stored PNG. The optional live vision endpoint receives the PNG, question and allowed response format. The default local image baseline is labeled in both runtimes.
+
 ### Run the Studio with the Python backend
 
 From the extracted source, run `npm ci` (Node.js 22+) followed by `python3 backend/server.py` (Python 3.9+). Open <http://127.0.0.1:8765/studio.html>. The evaluator selector identifies the Python server. The hosted static and single-file editions run in the browser.

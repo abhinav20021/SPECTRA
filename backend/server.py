@@ -12,7 +12,8 @@ import time
 from functools import lru_cache
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from threading import BoundedSemaphore
+from threading import BoundedSemaphore, Lock
+from collections import OrderedDict
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -20,6 +21,8 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / 'dist'
 SLOTS = BoundedSemaphore(4)
+LIVE_CASES = OrderedDict()
+LIVE_LOCK = Lock()
 
 
 class ServiceError(Exception):
@@ -50,16 +53,64 @@ def generate(family, task, seed, difficulty, baseline=False):
     return scene
 
 
-def spec_for(data, catalog):
-    family, task, seed = (data.get(k) for k in ('family', 'task', 'seed'))
+def task_for(data, catalog):
+    family, task = (data.get(k) for k in ('family', 'task'))
     difficulty = data.get('difficulty', 'standard')
     if not isinstance(family, str) or not isinstance(task, str) or task not in catalog.get(family, {}):
         raise ValueError('Choose a task from GET /api/tasks.')
+    if difficulty not in ('standard', 'close'):
+        raise ValueError('Choose standard or close difficulty.')
+    return family, task, difficulty
+
+
+def spec_for(data, catalog):
+    family, task, difficulty = task_for(data, catalog)
+    seed = data.get('seed')
     if seed is None:
         seed = secrets.randbits(32)
-    if type(seed) is not int or not 0 <= seed <= 0xffffffff or difficulty not in ('standard', 'close'):
-        raise ValueError('Expected a uint32 seed and standard or close difficulty.')
+    if type(seed) is not int or not 0 <= seed <= 0xffffffff:
+        raise ValueError('Expected a uint32 seed.')
     return family, task, seed, difficulty
+
+
+def new_live_case(data, catalog):
+    if 'seed' in data:
+        raise ValueError('Live cases take a task and difficulty. Omit the seed.')
+    family, task, difficulty = task_for(data, catalog)
+    case = render('fresh', family=family, task=task, difficulty=difficulty)
+    case['id'] = secrets.token_urlsafe(18)
+    case['runtime'] = 'Python server'
+    with LIVE_LOCK:
+        LIVE_CASES[case['id']] = case
+        if len(LIVE_CASES) > 64:
+            LIVE_CASES.popitem(last=False)
+    return case
+
+
+def evaluate_live(data):
+    case_id, which, evaluator = (data.get(k) for k in ('id', 'probe', 'evaluator'))
+    if not isinstance(case_id, str) or which not in ('direct', 'swap') or evaluator not in ('local', 'openai'):
+        raise ValueError('Choose a live case, question and evaluator.')
+    with LIVE_LOCK:
+        case = LIVE_CASES.get(case_id)
+        if case is None:
+            raise ServiceError(410, 'This live case expired. Generate a fresh case.')
+        LIVE_CASES.move_to_end(case_id)
+    probe = case['questions'][which]
+    started = time.monotonic()
+    if evaluator == 'openai':
+        raw = model_answer(case['image'], probe['text'], probe['choices'])
+        model = os.environ['VTF_MODEL']
+    else:
+        result = render('fresh-baseline', image=case['image'],
+                        probe={k: probe[k] for k in ('baseQuestion', 'claim') if k in probe})
+        raw, model = result['raw'], 'Local image baseline'
+    predicted = time.monotonic()
+    answer = normalize(raw, probe['choices'], case['family'])
+    correct = answer == probe['reference']
+    return dict(id=case_id, probe=which, model=model, raw=raw, answer=answer,
+                correct=correct, predictionMs=round(1000*(predicted-started),1),
+                scoringMs=round(1000*(time.monotonic()-predicted),2))
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -142,7 +193,7 @@ class Handler(SimpleHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == '/api/tasks':
             return self.send_data(self.server.catalog)
-        if path in ('/', '/index.html', '/studio.html'):
+        if path in ('/', '/index.html', '/studio.html', '/live.html'):
             file = 'index.html' if path == '/' else path[1:]
             html = (DIST / file).read_bytes().replace(b'<head>', b'<head><meta name="vtf-runtime" content="python">', 1)
             return self.send_data(html, 'text/html; charset=utf-8')
@@ -154,7 +205,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         path = urlsplit(self.path).path
-        if path not in ('/api/challenge', '/api/evaluate'):
+        if path not in ('/api/challenge', '/api/evaluate', '/api/live/new', '/api/live/evaluate'):
             return self.send_data({'error': 'Unknown endpoint.'}, status=404)
         origin = self.headers.get('Origin')
         if origin and urlsplit(origin).netloc != self.headers.get('Host'):
@@ -168,8 +219,12 @@ class Handler(SimpleHTTPRequestHandler):
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 raise ValueError('Expected a JSON object.')
-            spec = spec_for(data, self.server.catalog)
             with SLOTS:
+                if path == '/api/live/new':
+                    return self.send_data(new_live_case(data, self.server.catalog))
+                if path == '/api/live/evaluate':
+                    return self.send_data(evaluate_live(data))
+                spec = spec_for(data, self.server.catalog)
                 if path == '/api/challenge':
                     result = generate(*spec)
                 else:

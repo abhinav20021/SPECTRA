@@ -13,7 +13,10 @@
   const prompts=new Map();
   for(const d of Object.values(catalog))for(const q of d.queries)prompts.set(q.text,[d,q]);
   function query(d,seed,difficulty){
-    const rng=E.random((seed^0x9e3779b9)>>>0),q=L.pick(rng,d.queries);
+    return sampleQuery(d,E.random((seed^0x9e3779b9)>>>0),difficulty);
+  }
+  function sampleQuery(d,rng,difficulty){
+    const q=L.pick(rng,d.queries);
     if(d.id!=='recolor')return q;
     const n=difficulty==='close'?6:5,first=L.int(rng,1,n-2),last=L.int(rng,first+1,n);
     return {...q,first,last,text:q.text+' Inspect rows '+first+' through '+last+' from the top.'};
@@ -91,6 +94,6 @@
       skillScores:items=>Object.entries(all).flatMap(([family,def])=>{const rows=items.filter(i=>(i.family||'charts')===family);return rows.length?[{family,name:def.name,...E.score(rows)}]:[];})
     };
   }
-  window.StudioLab={register,families,catalog,normalize,decodeQuestion,query};
+  window.StudioLab={register,families,catalog,normalize,decodeQuestion,query,sampleQuery};
   window.VisualSkills=register(window.VisualSkills);
 })();

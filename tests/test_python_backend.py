@@ -31,5 +31,22 @@ class PythonStudioTests(unittest.TestCase):
             server.spec_for({'family': 'charts', 'task': 'recolor'}, server.render('catalog'))
 
 
+    def test_live_case_rejects_seeds_and_reuses_its_exact_image_for_both_prompts(self):
+        config = dict(family='quantities', task='recolor', difficulty='standard')
+        catalog = server.render('catalog')
+        with self.assertRaises(ValueError):
+            server.new_live_case(dict(config, seed=0), catalog)
+        case = server.new_live_case(config, catalog)
+        self.assertNotIn('seed', case)
+        with patch.dict('os.environ', VTF_MODEL='protocol-test'), patch.object(server, 'model_answer', return_value='invalid') as predict:
+            for key in ('direct', 'swap'):
+                result = server.evaluate_live(dict(id=case['id'], probe=key, evaluator='openai'))
+                self.assertFalse(result['correct'])
+                probe = case['questions'][key]
+                predict.assert_called_with(case['image'], probe['text'], probe['choices'])
+        with self.assertRaises(server.ServiceError):
+            server.evaluate_live(dict(id='missing', probe='direct', evaluator='local'))
+
+
 if __name__ == '__main__':
     unittest.main()

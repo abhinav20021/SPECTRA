@@ -38,4 +38,6 @@ async function decode(png) {
   canvas.getContext('2d').drawImage(img,0,0);
   return canvas;
 }
-module.exports = {skills,engine,generatorVersion,revisionFor,decode};
+const liveSource=fs.readFileSync(path.join(dist,'live-engine.js'),'utf8');
+vm.compileFunction(liveSource,['window'])(studio);
+module.exports = {live:studio.LiveLab,skills,engine,generatorVersion,revisionFor,decode};

@@ -1,14 +1,20 @@
 'use strict';
 // The HTTP service and offline Studio share these task definitions and pixel readers.
 const fs = require('node:fs');
-const { skills, engine, decode } = require('../framework/runtime.cjs');
+const { live, skills, engine, decode } = require('../framework/runtime.cjs');
 const families = Object.fromEntries(Object.entries(skills.families)
   .filter(([id]) => !id.startsWith('panel_'))
   .map(([id, def]) => [id, def.types]));
 
 async function main() {
-  const { action, family, task, seed, difficulty } = JSON.parse(fs.readFileSync(0, 'utf8'));
+  const input = JSON.parse(fs.readFileSync(0, 'utf8'));
+  const { action, family, task, seed, difficulty } = input;
   if (action === 'catalog') return families;
+  const decodeUrl = url => decode(Buffer.from(url.split(',')[1], 'base64'));
+  if (action === 'fresh') return live.generate(family, task, difficulty, {
+    encode: canvas => canvas.toDataURL('image/png'), decode: decodeUrl
+  });
+  if (action === 'fresh-baseline') return live.baseline(input.image, input.probe, decodeUrl);
   const scene = skills.create(family, seed, task, difficulty);
   const variants = [];
   for (const t of scene.tasks) {

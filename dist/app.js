@@ -66,6 +66,10 @@ function draw(){
   if(!challenge)return;
   const t=challenge.tasks[active],c=$('chart');c.getContext('2d').drawImage(t.canvas,0,0);
   const def=S.families[challenge.family];
+  if($('liveSwap')){
+    const params=new URLSearchParams({skill:challenge.family,task:challenge.question,difficulty:challenge.difficulty,probe:'swap'});
+    $('liveSwap').href='live.html?'+params;
+  }
   c.setAttribute('aria-label',t.variant+' image for '+def.name+'. Measurements are available under Inspect checks.');
   $('variantNote').textContent=challenge.question==='recolor'&&active===2?'One bin edited in the after plan · same before plan':def.notes[active];$('questionText').textContent=challenge.prompt;$('seedText').textContent=pad(challenge.seed);
   document.querySelectorAll('.variant').forEach((b,i)=>{

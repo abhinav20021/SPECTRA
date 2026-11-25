@@ -71,3 +71,22 @@ test('restyling changes the visible task marks in every reasoning task', () => {
     }
   }
 });
+
+test('live questions and swaps use the same verified PNG for every Studio task',async()=>{
+  const {live}=require('../framework/runtime.cjs');
+  const io={encode:c=>c.toDataURL('image/png'),decode:url=>decode(Buffer.from(url.split(',')[1],'base64'))};
+  for(const [family,def] of Object.entries(skills.families).filter(([id])=>!id.startsWith('panel_'))){
+    for(const task of Object.keys(def.types)){
+      const c=await live.generate(family,task,'close',io);
+      const {direct,swap}=c.questions;
+      assert.ok(!('seed' in c));assert.notEqual(direct.text,swap.text);
+      for(const [id,q] of Object.entries(c.questions)){
+        const measured=c.pixels[id].answer;
+        const expected=q.kind==='claim check'?(measured===q.claim?'Yes':'No'):measured;
+        assert.equal(q.pixelAnswer,expected);assert.equal(q.reference,expected);
+        assert.ok(q.choices.includes(expected));
+      }
+      if(swap.kind==='new target')assert.notEqual(swap.baseQuestion,direct.baseQuestion);
+    }
+  }
+});

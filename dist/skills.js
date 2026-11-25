@@ -196,12 +196,15 @@
     if(family==='charts')return E.chartPrompt(key);
     return family==='counting'?countPrompts[key]:spatialPrompt(key);
   }
+  function objectScenes(family,rng,key,hard){
+    return family==='counting'?countScenes(rng,key,hard):spatialScenes(rng,key,hard);
+  }
   function create(family,seed,key,difficulty){
     const def=families[family];
     if(!Object.hasOwn(def.types,key))throw Error('Unknown question for this skill.');
     if(family==='charts')return {...E.create(seed,key,difficulty),family,choices:def.choices};
     const rng=E.random(seed),hard=difficulty==='close';
-    const scenes=family==='counting'?countScenes(rng,key,hard):spatialScenes(rng,key,hard);
+    const scenes=objectScenes(family,rng,key,hard);
     const tasks=scenes.map((rows,i)=>{
       const canvas=paint(rows,family,i===1?1:0);
       const answer=sourceAnswer(family,key,rows);
@@ -225,5 +228,5 @@
       return group.length?[{family,name:def.name,...E.score(group)}]:[];
     });
   }
-  window.VisualSkills={sourceAnswer,promptFor,families,create,predict,tourPlan,skillScores,pixelCheck};
+  window.VisualSkills={objectScenes,paint,sourceAnswer,promptFor,families,create,predict,tourPlan,skillScores,pixelCheck};
 })();

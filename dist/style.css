@@ -24,3 +24,5 @@
 @media(max-width:700px){.skillpicker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}.skillcard .skillart{display:none}.skillcard{min-width:0}.skillcard strong{font-size:.9rem}.livelog{grid-template-columns:repeat(2,minmax(0,1fr))}.livelog>div{padding:6px 10px}.heroactions{gap:6px}.heroactions .btn{padding:7px 10px}}
 
 .taskrow{display:flex;align-items:baseline;justify-content:space-between;gap:8px}.taskrow .linkbtn{font-size:.85rem;padding:0}.taskgroup{margin-top:12px}.taskgroup div{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 13px}.taskpick{font:inherit;font-size:.87rem;border:1px solid #d8d4e5;background:#faf9fd;color:#44396d;border-radius:6px;padding:6px 9px}.taskpick:hover{background:#eeeafa}
+
+.varianttabs .liveswap{margin-left:auto;align-self:center;padding:4px 6px;color:#5845ad;font-size:.85rem;font-weight:600;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}@media(max-width:640px){.varianttabs:has(.liveswap){flex-wrap:wrap}.varianttabs .liveswap{margin-left:0}}

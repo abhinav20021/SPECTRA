@@ -29,7 +29,9 @@
     return result;
   }
   function specs(seed, question, difficulty) {
-    const rand=random(seed);
+    return chartSpecs(random(seed),question,difficulty);
+  }
+  function chartSpecs(rand,question,difficulty){
     const high=76+Math.floor(rand()*20);
     const low=15+Math.floor(rand()*18);
     const vals=[high,high-10-Math.floor(rand()*11),low+10+Math.floor(rand()*9),low];
@@ -184,5 +186,5 @@
       style:hits.filter(h=>h[0]&&h[1]).length,change:hits.filter(h=>h[0]&&h[2]).length,pairs:items.length
     };
   }
-  window.VTF={chartKey,chartPrompt,random,shuffled,surface,create,specs,render,verifyImage,localAnswer,score,nextSeed,REGIONS,VARIANTS,W,H};
+  window.VTF={chartKey,chartPrompt,chartSpecs,random,shuffled,surface,create,specs,render,verifyImage,localAnswer,score,nextSeed,REGIONS,VARIANTS,W,H};
 })();
